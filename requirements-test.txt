@@ -1,0 +1,7 @@
+# This requirements are for development and testing only, not for production.
+pytest
+coverage
+pytest-cov
+gitchangelog
+pyright
+ruff
