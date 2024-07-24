@@ -1,6 +1,6 @@
 """CLI interface for tod_checker project."""
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
 import json
 from pathlib import Path
 
@@ -20,6 +20,7 @@ def main():
         type=Path,
         help="If provided, it will additionally store VM traces in this directory",
     )
+    parser.add_argument("--evaluate", action=BooleanOptionalAction, help='Run in evaluation mode, reading the trace from the traces-dir rather than producing it')
     parser.add_argument(
         "--provider",
         type=str,
@@ -38,10 +39,8 @@ def main():
     simulator = TransactionExecutor(rpc)
     checker = TodChecker(simulator, state_changes_fetcher, tx_block_mapper)
 
-    print("Fetching state changes")
     checker.download_data_for_transactions([tx_a, tx_b])
 
-    print("Simulating reverse execution")
     result = checker.is_TOD(tx_a, tx_b)
 
     if result:
@@ -64,12 +63,36 @@ def main():
         print("Transactions are not TOD")
 
     if args.traces_dir:
-        print("Creating traces")
         traces_dir: Path = args.traces_dir
-        traces_dir.mkdir(exist_ok=True)
-        trace_normal, trace_reverse = checker.trace_both_scenarios(tx_a, tx_b)
+        path_normal = traces_dir / f"{tx_a}_{tx_b}.json"
+        path_reverse = traces_dir / f"{tx_b}_{tx_a}.json"
 
-        with open(traces_dir / f"{tx_a}_{tx_b}.json", "w") as f:
-            json.dump(trace_normal, f, indent=2)
-        with open(traces_dir / f"{tx_b}_{tx_a}.json", "w") as f:
-            json.dump(trace_reverse, f, indent=2)
+        if args.evaluate:
+            with open(path_normal) as f_normal, open(path_reverse) as f_reverse:
+                trace_normal = json.load(f_normal)
+                trace_reverse = json.load(f_reverse)
+                first_diff_step = checker.first_difference_in_traces(trace_normal, trace_reverse)
+                if first_diff_step:
+                    step_a, step_b = first_diff_step
+                    print(f'Traces differ at {step_a["op"]}!')
+                    for key in set(step_a) | set(step_b):
+                        if step_a.get(key) != step_b.get(key):
+                            if key == 'storage':
+                                storage_a = step_a.get(key, {})
+                                storage_b = step_b.get(key, {})
+                                for slot in set(storage_a) | set(storage_b):
+                                    if storage_a.get(slot) != storage_b.get(slot):
+                                        print(f'storage@{slot}', storage_a.get(slot), storage_b.get(slot))
+                            else:
+                                print(key, step_a.get(key), step_b.get(key))
+                else:
+                    print('Traces are equal!')
+        else:
+            print("Creating traces")
+            traces_dir.mkdir(exist_ok=True)
+            trace_normal, trace_reverse = checker.trace_both_scenarios(tx_a, tx_b)
+
+            with open(path_normal) as f:
+                json.dump(trace_normal, f, indent=2)
+            with open(path_reverse) as f:
+                json.dump(trace_reverse, f, indent=2)

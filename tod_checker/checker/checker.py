@@ -119,6 +119,12 @@ class TodChecker:
 
         return (traces_normal, traces_reverse)
 
+    def first_difference_in_traces(self, traces_a: dict, traces_b: dict) -> tuple[dict, dict] | None:
+        for step_a, step_b in zip(traces_a['structLogs'], traces_b['structLogs']):
+            if step_a != step_b:
+                return step_a, step_b
+        return None
+
     def _compute_state_overrides(
         self, tx_a_hash: str, tx_b_hash: str
     ) -> ReplayingStateOverrides:
