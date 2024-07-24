@@ -10,7 +10,6 @@ snapshots = Snapshot()
 snapshots["test_finds_TOD post differing addresses"] = [
     "0x2e464a9332dc86a60d6b2c24fada0c8728a528e8",
     "0x440568bde9c7c9841400d7d6fe78aac0b0e66c39",
-    "0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97",
     "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
     "0x6b75d8af000000e20b7a7ddf000ba900b4009a80",
     "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -19,12 +18,11 @@ snapshots["test_finds_TOD post differing addresses"] = [
     "0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a",
 ]
 
-snapshots["test_finds_TOD post differing types"] = frozenset(["storage", "balance"])
+snapshots["test_finds_TOD post differing types"] = frozenset(["balance", "storage"])
 
 snapshots["test_finds_TOD pre differing addresses"] = [
     "0x2e464a9332dc86a60d6b2c24fada0c8728a528e8",
     "0x440568bde9c7c9841400d7d6fe78aac0b0e66c39",
-    "0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97",
     "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
     "0x6b75d8af000000e20b7a7ddf000ba900b4009a80",
     "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -32,4 +30,4 @@ snapshots["test_finds_TOD pre differing addresses"] = [
     "0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a",
 ]
 
-snapshots["test_finds_TOD pre differing types"] = frozenset(["storage", "balance"])
+snapshots["test_finds_TOD pre differing types"] = frozenset(["balance", "storage"])

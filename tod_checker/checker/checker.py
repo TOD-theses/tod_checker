@@ -82,6 +82,13 @@ class TodChecker:
             changes_a.by_tx, changes_b_normal, changes_b_reverse, tx_b["from"]
         )
 
+        # ignore changes of the block validators balance
+        # as removing T_A "obviously" impacts this state change
+        del changes_b_normal["pre"][block_b["miner"].lower()]["balance"]
+        del changes_b_normal["post"][block_b["miner"].lower()]["balance"]
+        del changes_b_reverse["pre"][block_b["miner"].lower()]["balance"]
+        del changes_b_reverse["post"][block_b["miner"].lower()]["balance"]
+
         comparison = compare_state_changes(changes_b_normal, changes_b_reverse)
 
         if comparison.equal():

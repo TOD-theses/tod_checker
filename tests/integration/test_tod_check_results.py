@@ -49,7 +49,6 @@ def test_replay_diverges(snapshot: PyTestSnapshotTest):
 
 
 @pytest.mark.vcr
-@pytest.mark.skip
 def test_finds_non_TOD(snapshot: PyTestSnapshotTest):
     tx_a = "0x0001e7b0bcf0c41941c5d53c8636139565456343e8fad9bc86609329e63cb350"
     tx_b = "0x866bf65489b0839eecfa313a60415e4f581786fbba1257c90e4f7ded97f74dd7"
