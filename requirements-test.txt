@@ -1,7 +1,9 @@
 # This requirements are for development and testing only, not for production.
-pytest
 coverage
+pytest
 pytest-cov
+pytest-recording
 gitchangelog
 pyright
 ruff
+snapshottest

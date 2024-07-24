@@ -2,6 +2,8 @@ from pytest import FixtureRequest, fixture
 from pathlib import Path
 import sys
 
+from vcr import VCR
+
 
 @fixture
 def root_dir(request: FixtureRequest) -> Path:
@@ -18,3 +20,7 @@ def go_to_tmpdir(request: FixtureRequest):
     # Chdir only for the duration of the test.
     with tmpdir.as_cwd():
         yield
+
+
+def pytest_recording_configure(config, vcr: VCR):
+    vcr.match_on = ("method", "scheme", "host", "port", "path", "query", "body")

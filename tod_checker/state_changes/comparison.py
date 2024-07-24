@@ -11,11 +11,11 @@ class StateComparison:
         return len(self.differing_addresses()) == 0
 
     def differing_addresses(self) -> Sequence[str]:
-        results = []
+        results = set()
         for addr in set(self._a) | set(self._b):
             if self._a.get(addr) != self._b.get(addr):
-                results.append(addr)
-        return results
+                results.add(addr)
+        return sorted(results)
 
     def differing_types(self) -> frozenset:
         results = set()

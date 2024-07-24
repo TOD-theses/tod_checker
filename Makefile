@@ -40,6 +40,10 @@ test: lint        ## Run tests and generate coverage report.
 	$(ENV_PREFIX)coverage xml
 	$(ENV_PREFIX)coverage html
 
+.PHONY: snapshots
+snapshots:        ## Run tests and overwrite existing snapshots.
+	$(ENV_PREFIX)pytest -v --snapshot-update --record-mode=new_episodes tests/
+
 .PHONY: watch
 watch:            ## Run tests on every change.
 	ls **/**.py | entr $(ENV_PREFIX)pytest -s -vvv -l --tb=long --maxfail=1 tests/
