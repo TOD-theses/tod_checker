@@ -108,7 +108,7 @@ def tx_data_to_tx_params(tx_data: TxData) -> TxParams:
     result: TxParams = {  # type: ignore
         "accessList": tx_data.get("accessList"),
         "blobVersionedHashes": tx_data.get("blobVersionedHashes"),
-        "chainId": tx_data["chainId"],
+        "chainId": tx_data.get("chainId"),
         "data": tx_data["input"],
         "from": tx_data["from"],
         "gas": tx_data["gas"],
@@ -118,7 +118,7 @@ def tx_data_to_tx_params(tx_data: TxData) -> TxParams:
         "maxPriorityFeePerGas": tx_data.get("maxPriorityFeePerGas"),
         "nonce": tx_data["nonce"],
         "to": tx_data["to"],
-        "type": tx_data["type"],
+        "type": tx_data.get("type"),
         "value": tx_data["value"],
     }
     for key, val in result.items():
