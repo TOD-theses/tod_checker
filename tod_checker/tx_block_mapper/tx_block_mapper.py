@@ -13,16 +13,20 @@ class TransactionBlockMapper:
         return set(self.download_block_for_transaction(tx) for tx in transactions)
 
     def download_block_for_transaction(self, transaction: str):
+        if transaction in self._transactions_cache:
+            return self._transactions_cache[transaction]["blockNumber"]
         tx = self._rpc.fetch_transaction(transaction)
-        self._transactions_cache[transaction] = tx
-        block = tx["blockNumber"]
-        if block not in self._blocks_cache:
-            self.download_block(block)
+        block_number = tx["blockNumber"]
+        if block_number not in self._blocks_cache:
+            self.download_block(block_number)
 
-        return block
+        return block_number
 
-    def download_block(self, block: int):
-        self._blocks_cache[block] = self._rpc.fetch_block_with_transactions(block)
+    def download_block(self, block_number: int):
+        block = self._rpc.fetch_block_with_transactions(block_number)
+        self._blocks_cache[block_number] = block
+        for tx in self._blocks_cache[block_number]["transactions"]:
+            self._transactions_cache[tx["hash"]] = tx
 
     def get_transaction(self, transaction: str):
         return self._transactions_cache[transaction]
