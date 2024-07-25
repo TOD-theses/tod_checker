@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Iterable, Literal, Sequence
+from typing import Literal, Sequence
 
 from tod_checker.state_changes.comparison import StateChangesComparison
 from tod_checker.types.types import PrePostState, WorldState
@@ -44,9 +44,12 @@ class TodChecker:
         self._tx_block_mapper = tx_block_mapper
         self.executor = simulator
 
-    def download_data_for_transactions(self, transactions: Iterable[str]):
-        blocks = self._tx_block_mapper.download_blocks_for_transactions(transactions)
-        self._state_changes_fetcher.download_blocks(blocks)
+    def download_data_for_transaction(self, transaction: str) -> int:
+        """Download data and return block number"""
+        return self._tx_block_mapper.download_block_for_transaction(transaction)
+
+    def download_data_for_block(self, block_number: int) -> None:
+        self._state_changes_fetcher.download_block(block_number)
 
     def is_TOD(
         self, tx_a_hash: str, tx_b_hash: str

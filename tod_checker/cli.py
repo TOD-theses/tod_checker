@@ -43,7 +43,10 @@ def main():
     simulator = TransactionExecutor(rpc)
     checker = TodChecker(simulator, state_changes_fetcher, tx_block_mapper)
 
-    checker.download_data_for_transactions([tx_a, tx_b])
+    block_a = checker.download_data_for_transaction(tx_a)
+    block_b = checker.download_data_for_transaction(tx_b)
+    for block in set((block_a, block_b)):
+        checker.download_data_for_block(block)
 
     try:
         result = checker.is_TOD(tx_a, tx_b)

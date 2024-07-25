@@ -25,7 +25,10 @@ def test_finds_TOD(snapshot: PyTestSnapshotTest):
     tx_b = "0xa3cc046ea030d51a16ee32514650f82ea9e41d1270ec2c1a749e5087b1fde4ce"
 
     checker = _get_checker()
-    checker.download_data_for_transactions([tx_a, tx_b])
+    block_a = checker.download_data_for_transaction(tx_a)
+    block_b = checker.download_data_for_transaction(tx_b)
+    for block in set((block_a, block_b)):
+        checker.download_data_for_block(block)
     result = checker.is_TOD(tx_a, tx_b)
 
     assert result is not False
@@ -39,7 +42,10 @@ def test_replay_diverges(snapshot: PyTestSnapshotTest):
     tx_b = "0x2302452ea583716d83a13f9f522f2ed5c098448fb9ee1abf7fced20932c4972b"
 
     checker = _get_checker()
-    checker.download_data_for_transactions([tx_a, tx_b])
+    block_a = checker.download_data_for_transaction(tx_a)
+    block_b = checker.download_data_for_transaction(tx_b)
+    for block in set((block_a, block_b)):
+        checker.download_data_for_block(block)
 
     with pytest.raises(ReplayDivergedException):
         checker.is_TOD(tx_a, tx_b)
@@ -51,7 +57,10 @@ def test_finds_non_TOD(snapshot: PyTestSnapshotTest):
     tx_b = "0x866bf65489b0839eecfa313a60415e4f581786fbba1257c90e4f7ded97f74dd7"
 
     checker = _get_checker()
-    checker.download_data_for_transactions([tx_a, tx_b])
+    block_a = checker.download_data_for_transaction(tx_a)
+    block_b = checker.download_data_for_transaction(tx_b)
+    for block in set((block_a, block_b)):
+        checker.download_data_for_block(block)
     result = checker.is_TOD(tx_a, tx_b)
 
     assert not result
