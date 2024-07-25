@@ -1,5 +1,5 @@
 from typing import Literal
-from tod_checker.rpc.types import AccountState, PrePostState
+from tod_checker.types.types import AccountState, PrePostState
 
 
 def state_diff_fill_implicit_fields(state_diff: PrePostState) -> None:
@@ -19,7 +19,14 @@ def state_diff_fill_implicit_fields(state_diff: PrePostState) -> None:
         pre[inserted_addr] = account_inserted_state(post[inserted_addr])
 
     for modified_addr in pre_addresses & post_addresses:
+        fill_implicit_prestate(pre[modified_addr], post[modified_addr])
         fill_poststate_with_unchanged_prestate(pre[modified_addr], post[modified_addr])
+
+
+def fill_implicit_prestate(prestate: AccountState, poststate: AccountState):
+    if "nonce" in poststate and "nonce" not in prestate:
+        assert poststate["nonce"] == 1
+        prestate["nonce"] = 0
 
 
 def fill_poststate_with_unchanged_prestate(

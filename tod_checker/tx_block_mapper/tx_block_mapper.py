@@ -1,6 +1,6 @@
 from typing import Iterable
 from tod_checker.rpc.rpc import RPC
-from tod_checker.rpc.types import BlockWithTransactions, TxData
+from tod_checker.types.types import BlockWithTransactions, TxData
 
 
 class TransactionBlockMapper:

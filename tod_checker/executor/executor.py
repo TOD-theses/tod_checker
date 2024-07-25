@@ -3,7 +3,7 @@ from tod_checker.rpc.state_diff_utils import (
     state_diff_fill_implicit_fields,
     state_diff_remove_unchanged_fields,
 )
-from tod_checker.rpc.types import PrePostState, TxData, WorldState
+from tod_checker.types.types import PrePostState, TxData, WorldState
 
 
 class TransactionExecutor:

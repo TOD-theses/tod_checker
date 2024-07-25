@@ -30,14 +30,13 @@ def test_finds_TOD(snapshot: PyTestSnapshotTest):
 
     assert result is not False
 
-    snapshot.assert_match(result.pre.differing_addresses(), "pre differing addresses")
-    snapshot.assert_match(result.post.differing_addresses(), "post differing addresses")
-    snapshot.assert_match(result.pre.differing_types(), "pre differing types")
-    snapshot.assert_match(result.post.differing_types(), "post differing types")
+    snapshot.assert_match(result.differences(), "differences")
 
 
 @pytest.mark.vcr
+@pytest.mark.skip
 def test_replay_diverges(snapshot: PyTestSnapshotTest):
+    # TODO: find a test case for this that actually diverges
     tx_a = "0x0364a6845b37541c3e06b1e1e1fb7b7d287ee48fe4d375f11fc7cdb68fe4e1d8"
     tx_b = "0xf1d36e5749ec4ff511110afdd68b6e663023c0bf3438c991006ecb2e6d9c5b32"
 

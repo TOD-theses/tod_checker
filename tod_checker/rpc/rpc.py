@@ -7,7 +7,7 @@ from web3.types import RPCEndpoint, TxParams
 from web3.method import Method
 from web3.datastructures import AttributeDict
 
-from tod_checker.rpc.types import (
+from tod_checker.types.types import (
     AccountState,
     BlockWithTransactions,
     PrePostState,

@@ -1,7 +1,6 @@
 from copy import deepcopy
 from typing import Sequence
-from tod_checker.rpc.types import PrePostState, WorldState
-from tod_checker.state_changes.comparison import StateChangesComparison, StateComparison
+from tod_checker.types.types import PrePostState, WorldState
 
 
 def sum_state_changes(state_changes: Sequence[PrePostState]) -> PrePostState:
@@ -37,15 +36,3 @@ def overwrite_account_changes(base: WorldState, value: WorldState):
                 base[addr]["storage"] = {}
             for slot, v in account["storage"].items():
                 base[addr]["storage"][slot] = v  # type: ignore
-
-
-def remove_state_changes(base: PrePostState, value: PrePostState) -> PrePostState:
-    # TODO
-    return base
-
-
-def compare_state_changes(a: PrePostState, b: PrePostState) -> StateChangesComparison:
-    return StateChangesComparison(
-        StateComparison(a["pre"], b["pre"]),
-        StateComparison(a["post"], b["post"]),
-    )

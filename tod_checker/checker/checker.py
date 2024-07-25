@@ -2,11 +2,10 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Iterable, Literal, Sequence
 
-from tod_checker.rpc.types import PrePostState, WorldState
+from tod_checker.state_changes.comparison import StateChangesComparison
+from tod_checker.types.types import PrePostState, WorldState
 from tod_checker.executor.executor import TransactionExecutor
 from tod_checker.state_changes.calculation import (
-    StateChangesComparison,
-    compare_state_changes,
     overwrite_account_changes,
     sum_state_changes,
     undo_state_changes,
@@ -82,16 +81,9 @@ class TodChecker:
             changes_a.by_tx, changes_b_normal, changes_b_reverse, tx_b["from"]
         )
 
-        # ignore changes of the block validators balance
-        # as removing T_A "obviously" impacts this state change
-        del changes_b_normal["pre"][block_b["miner"].lower()]["balance"]
-        del changes_b_normal["post"][block_b["miner"].lower()]["balance"]
-        del changes_b_reverse["pre"][block_b["miner"].lower()]["balance"]
-        del changes_b_reverse["post"][block_b["miner"].lower()]["balance"]
+        comparison = StateChangesComparison(changes_b_normal, changes_b_reverse)
 
-        comparison = compare_state_changes(changes_b_normal, changes_b_reverse)
-
-        if comparison.equal():
+        if not comparison.differences():
             return False
         return comparison
 
@@ -100,13 +92,17 @@ class TodChecker:
     ):
         changes_a_copy = deepcopy(changes_a)
         changes_b_copy = deepcopy(changes_b)
+        del changes_a_copy["pre"][miner.lower()]["balance"]
+        del changes_b_copy["pre"][miner.lower()]["balance"]
+        del changes_a_copy["pre"][sender.lower()]["balance"]
+        del changes_b_copy["pre"][sender.lower()]["balance"]
         del changes_a_copy["post"][miner.lower()]["balance"]
         del changes_b_copy["post"][miner.lower()]["balance"]
         del changes_a_copy["post"][sender.lower()]["balance"]
         del changes_b_copy["post"][sender.lower()]["balance"]
 
-        comparison = compare_state_changes(changes_a_copy, changes_b_copy)
-        return comparison.equal()
+        comparison = StateChangesComparison(changes_a_copy, changes_b_copy)
+        return not comparison.differences()
 
     def trace_both_scenarios(self, tx_a_hash: str, tx_b_hash: str) -> tuple[dict, dict]:
         tx_b = self._tx_block_mapper.get_transaction(tx_b_hash)
@@ -119,8 +115,10 @@ class TodChecker:
 
         return (traces_normal, traces_reverse)
 
-    def first_difference_in_traces(self, traces_a: dict, traces_b: dict) -> tuple[dict, dict] | None:
-        for step_a, step_b in zip(traces_a['structLogs'], traces_b['structLogs']):
+    def first_difference_in_traces(
+        self, traces_a: dict, traces_b: dict
+    ) -> tuple[dict, dict] | None:
+        for step_a, step_b in zip(traces_a["structLogs"], traces_b["structLogs"]):
             if step_a != step_b:
                 return step_a, step_b
         return None

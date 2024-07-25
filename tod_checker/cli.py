@@ -20,7 +20,11 @@ def main():
         type=Path,
         help="If provided, it will additionally store VM traces in this directory",
     )
-    parser.add_argument("--evaluate", action=BooleanOptionalAction, help='Run in evaluation mode, reading the trace from the traces-dir rather than producing it')
+    parser.add_argument(
+        "--evaluate",
+        action=BooleanOptionalAction,
+        help="Run in evaluation mode, reading the trace from the traces-dir rather than producing it",
+    )
     parser.add_argument(
         "--provider",
         type=str,
@@ -45,20 +49,8 @@ def main():
 
     if result:
         print("Found TOD")
-        print(
-            "Prestate differs at following addresses", result.pre.differing_addresses()
-        )
-        print(
-            "Poststate differs at following addresses",
-            result.post.differing_addresses(),
-        )
-        print(
-            "Prestate differing in following types", list(result.pre.differing_types())
-        )
-        print(
-            "Poststate differing in following types",
-            list(result.post.differing_types()),
-        )
+        for diff in result.differences():
+            print(diff)
     else:
         print("Transactions are not TOD")
 
@@ -71,28 +63,34 @@ def main():
             with open(path_normal) as f_normal, open(path_reverse) as f_reverse:
                 trace_normal = json.load(f_normal)
                 trace_reverse = json.load(f_reverse)
-                first_diff_step = checker.first_difference_in_traces(trace_normal, trace_reverse)
+                first_diff_step = checker.first_difference_in_traces(
+                    trace_normal, trace_reverse
+                )
                 if first_diff_step:
                     step_a, step_b = first_diff_step
                     print(f'Traces differ at {step_a["op"]}!')
                     for key in set(step_a) | set(step_b):
                         if step_a.get(key) != step_b.get(key):
-                            if key == 'storage':
+                            if key == "storage":
                                 storage_a = step_a.get(key, {})
                                 storage_b = step_b.get(key, {})
                                 for slot in set(storage_a) | set(storage_b):
                                     if storage_a.get(slot) != storage_b.get(slot):
-                                        print(f'storage@{slot}', storage_a.get(slot), storage_b.get(slot))
+                                        print(
+                                            f"storage@{slot}",
+                                            storage_a.get(slot),
+                                            storage_b.get(slot),
+                                        )
                             else:
                                 print(key, step_a.get(key), step_b.get(key))
                 else:
-                    print('Traces are equal!')
+                    print("Traces are equal!")
         else:
             print("Creating traces")
             traces_dir.mkdir(exist_ok=True)
             trace_normal, trace_reverse = checker.trace_both_scenarios(tx_a, tx_b)
 
-            with open(path_normal) as f:
+            with open(path_normal, "w") as f:
                 json.dump(trace_normal, f, indent=2)
-            with open(path_reverse) as f:
+            with open(path_reverse, "w") as f:
                 json.dump(trace_reverse, f, indent=2)
