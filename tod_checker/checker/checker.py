@@ -28,7 +28,9 @@ class ReplayingStateOverrides:
 
 
 class ReplayDivergedException(Exception):
-    pass
+    def __init__(self, comparison: StateChangesComparison, *args: object) -> None:
+        super().__init__(*args)
+        self.comparison = comparison
 
 
 class TodChecker:
@@ -65,11 +67,13 @@ class TodChecker:
             state_overrides.normal,
         )
 
-        if not self._equal_except_for_gas_costs(
+        replay_comparison = self._compare_ignoring_gas_costs(
             changes_b.by_tx, changes_b_normal, tx_b["from"], block_b["miner"]
-        ):
+        )
+        if replay_comparison.differences():
             raise ReplayDivergedException(
-                "The replay of transaction b is not close enough to the original"
+                replay_comparison,
+                "The replay of transaction b is not close enough to the original",
             )
 
         changes_b_reverse = self.executor.simulate_with_state_changes(
@@ -87,7 +91,7 @@ class TodChecker:
             return False
         return comparison
 
-    def _equal_except_for_gas_costs(
+    def _compare_ignoring_gas_costs(
         self, changes_a: PrePostState, changes_b: PrePostState, sender: str, miner: str
     ):
         changes_a_copy = deepcopy(changes_a)
@@ -102,7 +106,7 @@ class TodChecker:
         del changes_b_copy["post"][sender.lower()]["balance"]
 
         comparison = StateChangesComparison(changes_a_copy, changes_b_copy)
-        return not comparison.differences()
+        return comparison
 
     def trace_both_scenarios(self, tx_a_hash: str, tx_b_hash: str) -> tuple[dict, dict]:
         tx_b = self._tx_block_mapper.get_transaction(tx_b_hash)

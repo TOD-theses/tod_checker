@@ -34,5 +34,4 @@ class TransactionExecutor:
         )
 
     def replay_with_traces(self, tx_hash: str) -> dict:
-        print("Replaying", tx_hash)
         return self._rpc.debug_trace_transaction(tx_hash)

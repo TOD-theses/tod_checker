@@ -4,7 +4,7 @@ from argparse import ArgumentParser, BooleanOptionalAction
 import json
 from pathlib import Path
 
-from tod_checker.checker.checker import TodChecker
+from tod_checker.checker.checker import ReplayDivergedException, TodChecker
 from tod_checker.rpc.rpc import RPC
 from tod_checker.executor.executor import TransactionExecutor
 from tod_checker.state_changes.fetcher import StateChangesFetcher
@@ -45,7 +45,13 @@ def main():
 
     checker.download_data_for_transactions([tx_a, tx_b])
 
-    result = checker.is_TOD(tx_a, tx_b)
+    try:
+        result = checker.is_TOD(tx_a, tx_b)
+    except ReplayDivergedException as e:
+        print("Replay Diverged")
+        for diff in e.comparison.differences():
+            print(diff)
+        quit()
 
     if result:
         print("Found TOD")

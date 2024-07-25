@@ -34,11 +34,9 @@ def test_finds_TOD(snapshot: PyTestSnapshotTest):
 
 
 @pytest.mark.vcr
-@pytest.mark.skip
 def test_replay_diverges(snapshot: PyTestSnapshotTest):
-    # TODO: find a test case for this that actually diverges
-    tx_a = "0x0364a6845b37541c3e06b1e1e1fb7b7d287ee48fe4d375f11fc7cdb68fe4e1d8"
-    tx_b = "0xf1d36e5749ec4ff511110afdd68b6e663023c0bf3438c991006ecb2e6d9c5b32"
+    tx_a = "0xcab686b06d64de0fc5dc5b86fd634e377f57a837c1e63d0d1431ea69b622ce4d"
+    tx_b = "0x2302452ea583716d83a13f9f522f2ed5c098448fb9ee1abf7fced20932c4972b"
 
     checker = _get_checker()
     checker.download_data_for_transactions([tx_a, tx_b])

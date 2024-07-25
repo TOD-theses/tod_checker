@@ -10,6 +10,19 @@ class StateChangeDifference:
     difference_a: int
     difference_b: int
 
+    def __str__(self):
+        msg = "<changes differ: "
+        msg += "@".join(self.key)
+        msg += f" original: {self._format_change(self.difference_a)} | other: {self._format_change(self.difference_b)}>"
+        return msg
+
+    @staticmethod
+    def _format_change(change: int):
+        if change >= 0:
+            return f"+{hex(change)}"
+        else:
+            return f"-{hex(-change)}"
+
 
 def resolve(state: WorldState, key: StateKey) -> int | None:
     if len(key) == 2:

@@ -1,5 +1,6 @@
 from copy import deepcopy
 import json
+import os
 from typing import Any, Literal
 from eth_typing import HexStr
 from web3 import Web3
@@ -17,12 +18,14 @@ from tod_checker.types.types import (
     WorldState,
 )
 
+RPC_TIMEOUT = int(os.environ.get("RPC_TIMEOUT", "120"))
+
 
 class RPC:
     def __init__(self, archive_node_provider_url: str) -> None:
         self.w3 = Web3(
             Web3.HTTPProvider(
-                archive_node_provider_url, request_kwargs={"timeout": 120}
+                archive_node_provider_url, request_kwargs={"timeout": RPC_TIMEOUT}
             )
         )
 
