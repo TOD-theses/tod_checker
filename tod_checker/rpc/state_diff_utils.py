@@ -25,7 +25,10 @@ def state_diff_fill_implicit_fields(state_diff: PrePostState) -> None:
 
 def fill_implicit_prestate(prestate: AccountState, poststate: AccountState):
     if "nonce" in poststate and "nonce" not in prestate:
-        assert poststate["nonce"] == 1
+        assert poststate["nonce"] == 1, (
+            f'Found nonce {poststate["nonce"]} in poststate but no nonce in prestate. '
+            'Would have expected it to be 1 if it previously did not exist (see stateDiff docs)'
+        )
         prestate["nonce"] = 0
 
 

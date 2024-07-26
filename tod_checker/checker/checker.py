@@ -33,6 +33,16 @@ class ReplayDivergedException(Exception):
         self.comparison = comparison
 
 
+class TransactionFetchingException(Exception):
+    def __init__(self, tx: str) -> None:
+        super().__init__(f"Could not fetch transaction {tx}")
+
+
+class StateChangesFetchingException(Exception):
+    def __init__(self, block_number: int) -> None:
+        super().__init__(f"Could not fetch state changes for block {hex(block_number)}")
+
+
 class TodChecker:
     def __init__(
         self,
@@ -46,10 +56,16 @@ class TodChecker:
 
     def download_data_for_transaction(self, transaction: str) -> int:
         """Download data and return block number"""
-        return self._tx_block_mapper.download_block_for_transaction(transaction)
+        try:
+            return self._tx_block_mapper.download_block_for_transaction(transaction)
+        except Exception as e:
+            raise TransactionFetchingException(transaction) from e
 
     def download_data_for_block(self, block_number: int) -> None:
-        self._state_changes_fetcher.download_block(block_number)
+        try:
+            self._state_changes_fetcher.download_block(block_number)
+        except Exception as e:
+            raise StateChangesFetchingException(block_number) from e
 
     def is_TOD(
         self, tx_a_hash: str, tx_b_hash: str
