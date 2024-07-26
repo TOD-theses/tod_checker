@@ -143,4 +143,6 @@ def account_state_to_override(account_state: AccountState) -> dict:
             # remove leading zeros, erigon does not like them
             result["stateDiff"][slot] = hex(int(val, 16))
         del result["storage"]
+    if result.get('code') == '0x0':
+        result['code'] = '0x'
     return result
