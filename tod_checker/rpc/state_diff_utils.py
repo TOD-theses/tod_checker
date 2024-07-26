@@ -25,11 +25,10 @@ def state_diff_fill_implicit_fields(state_diff: PrePostState) -> None:
 
 def fill_implicit_prestate(prestate: AccountState, poststate: AccountState):
     if "nonce" in poststate and "nonce" not in prestate:
-        assert poststate["nonce"] == 1, (
-            f'Found nonce {poststate["nonce"]} in poststate but no nonce in prestate. '
-            'Would have expected it to be 1 if it previously did not exist (see stateDiff docs)'
-        )
-        prestate["nonce"] = 0
+        # it can happen that the prestate nonce is missing, despite not being 0 in the prestate
+        # thus we only decrement by 1 and hope it's correct
+        # see https://github.com/erigontech/erigon/pull/10961
+        prestate["nonce"] = poststate["nonce"] - 1
 
 
 def fill_poststate_with_unchanged_prestate(
