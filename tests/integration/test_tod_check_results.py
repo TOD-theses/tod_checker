@@ -2,6 +2,7 @@ import pytest
 
 from tod_checker.checker.checker import ReplayDivergedException, TodChecker
 from tod_checker.executor.executor import TransactionExecutor
+from tod_checker.rpc.override_formatter import OverridesFormatter
 from tod_checker.rpc.rpc import RPC
 from tod_checker.state_changes.fetcher import StateChangesFetcher
 from tod_checker.tx_block_mapper.tx_block_mapper import TransactionBlockMapper
@@ -9,10 +10,11 @@ from tod_checker.tx_block_mapper.tx_block_mapper import TransactionBlockMapper
 from snapshottest.pytest import PyTestSnapshotTest
 
 test_provider_url = "http://localhost:8124/eth"
+overrides_formatter = OverridesFormatter("old Erigon")
 
 
 def _get_checker():
-    rpc = RPC(test_provider_url)
+    rpc = RPC(test_provider_url, overrides_formatter)
     state_changes_fetcher = StateChangesFetcher(rpc)
     tx_block_mapper = TransactionBlockMapper(rpc)
     simulator = TransactionExecutor(rpc)

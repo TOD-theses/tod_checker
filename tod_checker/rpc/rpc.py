@@ -8,8 +8,8 @@ from web3.types import RPCEndpoint, TxParams
 from web3.method import Method
 from web3.datastructures import AttributeDict
 
+from tod_checker.rpc.override_formatter import OverridesFormatter
 from tod_checker.types.types import (
-    AccountState,
     BlockWithTransactions,
     PrePostState,
     TxData,
@@ -22,7 +22,10 @@ RPC_TIMEOUT = int(os.environ.get("RPC_TIMEOUT", "120"))
 
 
 class RPC:
-    def __init__(self, archive_node_provider_url: str) -> None:
+    def __init__(
+        self, archive_node_provider_url: str, overrides_formatter: OverridesFormatter
+    ) -> None:
+        self.overrides_formatter = overrides_formatter
         self.w3 = Web3(
             Web3.HTTPProvider(
                 archive_node_provider_url, request_kwargs={"timeout": RPC_TIMEOUT}
@@ -72,8 +75,8 @@ class RPC:
         tracing_type: Literal["state_diff"] | Literal["prestate"] | Literal["vmTrace"],
     ) -> PrePostState:
         overrides = dict(
-            (key, account_state_to_override(acc))
-            for key, acc in state_overrides.items()
+            (key, self.overrides_formatter.format(acc))
+            for key, acc in list(state_overrides.items())
         )
         options: dict = {
             "stateOverrides": overrides,
@@ -130,19 +133,4 @@ def tx_data_to_tx_params(tx_data: TxData) -> TxParams:
         del result["maxFeePerGas"]
         del result["maxFeePerBlobGas"]
         del result["maxPriorityFeePerGas"]
-    return result
-
-
-def account_state_to_override(account_state: AccountState) -> dict:
-    result: dict = deepcopy(account_state)  # type: ignore
-    if "nonce" in result:
-        result["nonce"] = hex(result["nonce"])
-    if "storage" in result:
-        result["stateDiff"] = result["storage"]
-        for slot, val in result["stateDiff"].items():
-            # remove leading zeros, erigon does not like them
-            result["stateDiff"][slot] = hex(int(val, 16))
-        del result["storage"]
-    if result.get('code') == '0x0':
-        result['code'] = '0x'
     return result

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from tod_checker.checker.checker import ReplayDivergedException, TodChecker
+from tod_checker.rpc.override_formatter import OverridesFormatter
 from tod_checker.rpc.rpc import RPC
 from tod_checker.executor.executor import TransactionExecutor
 from tod_checker.state_changes.fetcher import StateChangesFetcher
@@ -31,13 +32,19 @@ def main():
         default="http://localhost:8124/eth",
         help="Url for the archive node RPC",
     )
+    parser.add_argument(
+        "--provider-type",
+        default="old Erigon",
+        choices=["old Erigon", "reth"],
+        help="Some fine tuning for peculiarities of the providers",
+    )
     args = parser.parse_args()
 
     tx_a, tx_b = args.tx_a, args.tx_b
 
     print(f"Checking {tx_a} -> ... -> {tx_b} for TOD")
 
-    rpc = RPC(args.provider)
+    rpc = RPC(args.provider, OverridesFormatter(args.provider_type))
     state_changes_fetcher = StateChangesFetcher(rpc)
     tx_block_mapper = TransactionBlockMapper(rpc)
     simulator = TransactionExecutor(rpc)
