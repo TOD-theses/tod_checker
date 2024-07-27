@@ -115,12 +115,14 @@ class TodChecker:
     ):
         changes_a_copy = deepcopy(changes_a)
         changes_b_copy = deepcopy(changes_b)
-        del changes_a_copy["pre"][miner.lower()]["balance"]
-        del changes_b_copy["pre"][miner.lower()]["balance"]
+        if miner.lower() in changes_a_copy["pre"]:
+            del changes_a_copy["pre"][miner.lower()]["balance"]
+            del changes_a_copy["post"][miner.lower()]["balance"]
+        if miner.lower() in changes_b_copy["pre"]:
+            del changes_b_copy["pre"][miner.lower()]["balance"]
+            del changes_b_copy["post"][miner.lower()]["balance"]
         del changes_a_copy["pre"][sender.lower()]["balance"]
         del changes_b_copy["pre"][sender.lower()]["balance"]
-        del changes_a_copy["post"][miner.lower()]["balance"]
-        del changes_b_copy["post"][miner.lower()]["balance"]
         del changes_a_copy["post"][sender.lower()]["balance"]
         del changes_b_copy["post"][sender.lower()]["balance"]
 
