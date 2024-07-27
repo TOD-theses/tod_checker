@@ -104,7 +104,9 @@ class TodChecker:
             changes_a.by_tx, changes_b_normal, changes_b_reverse, tx_b["from"]
         )
 
-        comparison = StateChangesComparison(changes_b_normal, changes_b_reverse)
+        comparison = self._compare_ignoring_gas_costs(
+            changes_b_normal, changes_b_reverse, tx_b["from"], block_b["miner"]
+        )
 
         if not comparison.differences():
             return False
@@ -113,6 +115,7 @@ class TodChecker:
     def _compare_ignoring_gas_costs(
         self, changes_a: PrePostState, changes_b: PrePostState, sender: str, miner: str
     ):
+        """Ignore gas costs, as these are not correct for Erigon currently"""
         changes_a_copy = deepcopy(changes_a)
         changes_b_copy = deepcopy(changes_b)
         if miner.lower() in changes_a_copy["pre"]:
