@@ -1,4 +1,4 @@
-from tod_checker.state_changes.comparison import StateChangesComparison
+from tod_checker.state_changes.comparison import compare_state_changes
 from tod_checker.types.types import PrePostState, WorldState
 
 addr_1: str = "0xabcd"
@@ -35,7 +35,7 @@ def get_sample_states() -> tuple[PrePostState, PrePostState]:
 def test_comparison_equal():
     a, b = get_sample_states()
 
-    comparison = StateChangesComparison(a, b)
+    comparison = compare_state_changes(a, b)
 
     assert not comparison.differences()
 
@@ -48,7 +48,7 @@ def test_comparison_equal_const_change():
     a["post"][addr_1]["balance"] = hex(int(a["pre"][addr_1]["balance"], 16) + 123)  # type: ignore
     b["post"][addr_1]["balance"] = hex(int(b["pre"][addr_1]["balance"], 16) + 123)  # type: ignore
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert not differences
 
@@ -58,7 +58,7 @@ def test_comparison_changed_pre_storage():
     a, b = get_sample_states()
     b["pre"][addr_1]["storage"][addr_1_slot] = "bbbb"  # type: ignore
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
     assert differences[0].key == ("storage", addr_1, addr_1_slot)
@@ -68,7 +68,7 @@ def test_comparison_changed_post_storage():
     a, b = get_sample_states()
     b["post"][addr_1]["storage"][addr_1_slot] = "bbbb"  # type: ignore
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
     assert differences[0].key == ("storage", addr_1, addr_1_slot)
@@ -79,7 +79,7 @@ def test_comparison_new_storage_slot():
     b["pre"][addr_1]["storage"]["x"] = "0000"  # type: ignore
     b["post"][addr_1]["storage"]["x"] = "cccc"  # type: ignore
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
     assert differences[0].key == ("storage", addr_1, "x")
@@ -92,7 +92,7 @@ def test_comparison_removed_slot():
     del b["pre"][addr_1]["storage"][addr_1_slot]  # type: ignore
     del b["post"][addr_1]["storage"][addr_1_slot]  # type: ignore
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
     assert differences[0].key == ("storage", addr_1, addr_1_slot)
@@ -103,7 +103,7 @@ def test_comparison_added_nonce_change():
     b["pre"][addr_2]["nonce"] = 123
     b["post"][addr_2]["nonce"] = 456
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
     assert differences[0].key == ("nonce", addr_2)
@@ -114,7 +114,7 @@ def test_comparison_new_address():
     b["pre"]["0xnew"] = {"balance": "0xaaaa"}
     b["post"]["0xnew"] = {"balance": "0xbbbb"}
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
     assert differences[0].key == ("balance", "0xnew")
@@ -127,7 +127,7 @@ def test_comparison_removed_address():
     del b["pre"][addr_1]
     del b["post"][addr_1]
 
-    differences = StateChangesComparison(a, b).differences()
+    differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
     assert differences[0].key == ("balance", addr_1)

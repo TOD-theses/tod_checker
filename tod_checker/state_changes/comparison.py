@@ -1,7 +1,7 @@
 from typing import Iterable, Sequence
 
 from attr import dataclass
-from tod_checker.types.types import PrePostState, StateKey, WorldState
+from tod_checker.types.types import PrePostState, StateKey, WorldState, WorldStateDiff
 
 
 @dataclass
@@ -24,7 +24,7 @@ class StateChangeDifference:
             return f"-{hex(-change)}"
 
 
-def resolve(state: WorldState, key: StateKey) -> int | None:
+def resolve(state: WorldState | WorldStateDiff, key: StateKey) -> int | None:
     if len(key) == 2:
         value = state.get(key[1], {}).get(key[0])
     else:
@@ -36,30 +36,49 @@ def resolve(state: WorldState, key: StateKey) -> int | None:
     return value
 
 
-def compute_diff(state_a: WorldState, state_b: WorldState, key: StateKey) -> int:
-    a = resolve(state_a, key)
-    b = resolve(state_b, key)
-
-    if a == b:
+def resolve_diff(state: WorldStateDiff, key: StateKey) -> int:
+    value = resolve(state, key)
+    if value is None:
         return 0
-    if a is None or b is None:
-        raise Exception(
-            f"Unexpected None: {key} {a} {b}. Please verify, that both states have the same state keys"
-        )
-    return b - a
+    return value
+
+
+def to_world_state_diff(state_a: WorldState, state_b: WorldState) -> WorldStateDiff:
+    diff: WorldStateDiff = {}
+    for k in set(state_keys(state_a)) | set(state_keys(state_b)):
+        type = k[0]
+        addr = k[1]
+        if addr not in diff:
+            diff[addr] = {}
+        val_a = resolve(state_a, k)
+        val_b = resolve(state_b, k)
+        assert (
+            val_a is not None and val_b is not None
+        ), f"Cannot create diff if states have different keys: {k}"
+        val_diff = val_b - val_a
+
+        if len(k) == 2:
+            diff[addr][type] = val_diff
+        else:
+            slot = k[2]
+            if type not in diff[addr]:
+                diff[addr][type] = {}
+            diff[addr][type][slot] = val_diff
+
+    return diff
 
 
 class StateChangesComparison:
-    def __init__(self, a: PrePostState, b: PrePostState) -> None:
-        self.a = a
-        self.b = b
+    def __init__(self, a: WorldStateDiff, b: WorldStateDiff) -> None:
+        self._a = a
+        self._b = b
 
     def differences(self) -> Sequence[StateChangeDifference]:
         differences = []
 
         for state_key in self.all_state_keys():
-            diff_a = compute_diff(self.a["pre"], self.a["post"], state_key)
-            diff_b = compute_diff(self.b["pre"], self.b["post"], state_key)
+            diff_a = resolve_diff(self._a, state_key)
+            diff_b = resolve_diff(self._b, state_key)
 
             if diff_a != diff_b:
                 differences.append(StateChangeDifference(state_key, diff_a, diff_b))
@@ -69,15 +88,13 @@ class StateChangesComparison:
     def all_state_keys(self) -> Sequence[StateKey]:
         keys = set()
 
-        keys.update(state_keys(self.a["pre"]))
-        keys.update(state_keys(self.b["pre"]))
-        keys.update(state_keys(self.a["post"]))
-        keys.update(state_keys(self.b["post"]))
+        keys.update(state_keys(self._a))
+        keys.update(state_keys(self._b))
 
         return sorted(keys)
 
 
-def state_keys(state: WorldState) -> Iterable[StateKey]:
+def state_keys(state: WorldState | WorldStateDiff) -> Iterable[StateKey]:
     for addr in state:
         for key in state[addr]:
             if key == "storage":
@@ -85,3 +102,10 @@ def state_keys(state: WorldState) -> Iterable[StateKey]:
                     yield (key, addr, slot)
             else:
                 yield ((key, addr))
+
+
+def compare_state_changes(a: PrePostState, b: PrePostState) -> StateChangesComparison:
+    return StateChangesComparison(
+        to_world_state_diff(a["pre"], a["post"]),
+        to_world_state_diff(b["pre"], b["post"]),
+    )

@@ -72,6 +72,16 @@ class AccountState(TypedDict, total=False):
 WorldState = dict[str, AccountState]
 
 
+class AccountStateDiff(TypedDict, total=False):
+    balance: int
+    code: int
+    nonce: int
+    storage: dict[str, int]
+
+
+WorldStateDiff = dict[str, AccountStateDiff]
+
+
 class TxPrestate(TypedDict):
     txHash: str
     result: WorldState
@@ -87,4 +97,5 @@ class TxStateDiff(TypedDict):
     result: PrePostState
 
 
+# (type, addr) or ('storage', addr, slot)
 StateKey = tuple[str, str, str] | tuple[str, str]

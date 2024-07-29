@@ -2,7 +2,10 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Literal, Sequence
 
-from tod_checker.state_changes.comparison import StateChangesComparison
+from tod_checker.state_changes.comparison import (
+    StateChangesComparison,
+    compare_state_changes,
+)
 from tod_checker.types.types import PrePostState, WorldState
 from tod_checker.executor.executor import TransactionExecutor
 from tod_checker.state_changes.calculation import (
@@ -129,7 +132,7 @@ class TodChecker:
         del changes_a_copy["post"][sender.lower()]["balance"]
         del changes_b_copy["post"][sender.lower()]["balance"]
 
-        comparison = StateChangesComparison(changes_a_copy, changes_b_copy)
+        comparison = compare_state_changes(changes_a_copy, changes_b_copy)
         return comparison
 
     def trace_both_scenarios(self, tx_a_hash: str, tx_b_hash: str) -> tuple[dict, dict]:

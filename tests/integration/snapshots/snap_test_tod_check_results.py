@@ -9,13 +9,7 @@ snapshots = Snapshot()
 
 snapshots["test_finds_TOD differences"] = [
     GenericRepr(
-        "StateChangeDifference(key=('balance', '0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97'), difference_a=132097105181156, difference_b=160875966637666)"
-    ),
-    GenericRepr(
         "StateChangeDifference(key=('balance', '0x6b75d8af000000e20b7a7ddf000ba900b4009a80'), difference_a=41, difference_b=0)"
-    ),
-    GenericRepr(
-        "StateChangeDifference(key=('balance', '0xae2fc483527b8ef99eb5d9b44875f005ba1fae13'), difference_a=-631298708144879, difference_b=-768834334186443)"
     ),
     GenericRepr(
         "StateChangeDifference(key=('storage', '0x2e464a9332dc86a60d6b2c24fada0c8728a528e8', '0x0000000000000000000000000000000000000000000000000000000000000008'), difference_a=-93642995832518067243923322503102599459654300860416, difference_b=0)"
