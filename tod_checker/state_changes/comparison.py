@@ -7,13 +7,13 @@ from tod_checker.types.types import PrePostState, StateKey, WorldState, WorldSta
 @dataclass
 class StateChangeDifference:
     key: StateKey
-    difference_a: int
-    difference_b: int
+    original: int
+    other: int
 
     def __str__(self):
         msg = "<changes differ: "
         msg += "@".join(self.key)
-        msg += f" original: {self._format_change(self.difference_a)} | other: {self._format_change(self.difference_b)}>"
+        msg += f" original: {self._format_change(self.original)} | other: {self._format_change(self.other)}>"
         return msg
 
     @staticmethod

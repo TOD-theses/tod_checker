@@ -136,6 +136,20 @@ def test_comparison_removed_address():
     assert differences[0].key == ("balance", addr_1)
 
 
+def test_comparison_diff_result():
+    a, b = get_sample_states()
+    a["pre"][addr_1]["balance"] = "0xaaaa"
+    a["post"][addr_1]["balance"] = "0xbbbb"
+    del b["pre"][addr_1]
+    del b["post"][addr_1]
+
+    differences = compare_state_changes(a, b).differences()
+
+    assert len(differences) == 1
+    assert differences[0].original == 0xBBBB - 0xAAAA
+    assert differences[0].other == 0x0
+
+
 def test_world_state_diff_sum():
     a: WorldStateDiff = {"0xaddr": {"balance": 1234}}
     b: WorldStateDiff = {"0xaddr": {"balance": 10}, "0xother": {"nonce": 1}}
