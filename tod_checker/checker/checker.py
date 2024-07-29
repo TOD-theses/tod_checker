@@ -182,8 +182,8 @@ class TodChecker:
             )
 
     def trace_both_scenarios(
-        self, tx_a_hash: str, tx_b_hash: str, original_definition=True
-    ) -> tuple[dict, dict] | tuple[dict, dict, dict, dict]:
+        self, tx_a_hash: str, tx_b_hash: str
+    ) -> tuple[dict, dict, dict, dict]:
         a = self._prepare_data(tx_a_hash)
         b = self._prepare_data(tx_b_hash)
 
@@ -201,16 +201,9 @@ class TodChecker:
         traces_normal = self.executor.simulate_with_traces(b.tx, b.overrides_normal)
         traces_reverse = self.executor.simulate_with_traces(b.tx, overrides_reverse_b)
 
-        if original_definition:
-            return (traces_normal, traces_reverse)
-        else:
-            traces_normal_a = self.executor.simulate_with_traces(
-                a.tx, a.overrides_normal
-            )
-            traces_reverse_a = self.executor.simulate_with_traces(
-                a.tx, overrides_reverse_a
-            )
-            return (traces_normal, traces_reverse, traces_normal_a, traces_reverse_a)
+        traces_normal_a = self.executor.simulate_with_traces(a.tx, a.overrides_normal)
+        traces_reverse_a = self.executor.simulate_with_traces(a.tx, overrides_reverse_a)
+        return (traces_normal, traces_reverse, traces_normal_a, traces_reverse_a)
 
     def first_difference_in_traces(
         self, traces_a: dict, traces_b: dict
