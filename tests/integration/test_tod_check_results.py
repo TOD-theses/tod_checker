@@ -39,6 +39,23 @@ def test_finds_TOD(snapshot: PyTestSnapshotTest):
 
 
 @pytest.mark.vcr
+def test_finds_TOD_adapted_definition(snapshot: PyTestSnapshotTest):
+    tx_a = "0x0001e7b0bcf0c41941c5d53c8636139565456343e8fad9bc86609329e63cb350"
+    tx_b = "0xa3cc046ea030d51a16ee32514650f82ea9e41d1270ec2c1a749e5087b1fde4ce"
+
+    checker = _get_checker()
+    block_a = checker.download_data_for_transaction(tx_a)
+    block_b = checker.download_data_for_transaction(tx_b)
+    for block in set((block_a, block_b)):
+        checker.download_data_for_block(block)
+    result = checker.is_TOD(tx_a, tx_b, original_definition=False)
+
+    assert result is not False
+
+    snapshot.assert_match(result.differences(), "differences")
+
+
+@pytest.mark.vcr
 def test_replay_diverges(snapshot: PyTestSnapshotTest):
     tx_a = "0xcab686b06d64de0fc5dc5b86fd634e377f57a837c1e63d0d1431ea69b622ce4d"
     tx_b = "0x2302452ea583716d83a13f9f522f2ed5c098448fb9ee1abf7fced20932c4972b"

@@ -43,7 +43,8 @@ def resolve_diff(state: WorldStateDiff, key: StateKey) -> int:
     return value
 
 
-def to_world_state_diff(state_a: WorldState, state_b: WorldState) -> WorldStateDiff:
+def to_world_state_diff(changes: PrePostState) -> WorldStateDiff:
+    state_a, state_b = changes["pre"], changes["post"]
     diff: WorldStateDiff = {}
     for k in set(state_keys(state_a)) | set(state_keys(state_b)):
         type = k[0]
@@ -66,6 +67,28 @@ def to_world_state_diff(state_a: WorldState, state_b: WorldState) -> WorldStateD
             diff[addr][type][slot] = val_diff
 
     return diff
+
+
+def add_world_state_diffs(a: WorldStateDiff, b: WorldStateDiff) -> WorldStateDiff:
+    diff_sum_state: WorldStateDiff = {}
+    for k in set(state_keys(a)) | set(state_keys(b)):
+        type = k[0]
+        addr = k[1]
+        if addr not in diff_sum_state:
+            diff_sum_state[addr] = {}
+        val_a = resolve(a, k) or 0
+        val_b = resolve(b, k) or 0
+        diff_sum = val_a + val_b
+
+        if len(k) == 2:
+            diff_sum_state[addr][type] = diff_sum
+        else:
+            slot = k[2]
+            if type not in diff_sum_state[addr]:
+                diff_sum_state[addr][type] = {}
+            diff_sum_state[addr][type][slot] = diff_sum
+
+    return diff_sum_state
 
 
 class StateChangesComparison:
@@ -106,6 +129,12 @@ def state_keys(state: WorldState | WorldStateDiff) -> Iterable[StateKey]:
 
 def compare_state_changes(a: PrePostState, b: PrePostState) -> StateChangesComparison:
     return StateChangesComparison(
-        to_world_state_diff(a["pre"], a["post"]),
-        to_world_state_diff(b["pre"], b["post"]),
+        to_world_state_diff(a),
+        to_world_state_diff(b),
     )
+
+
+def compare_world_state_diffs(
+    a: WorldStateDiff, b: WorldStateDiff
+) -> StateChangesComparison:
+    return StateChangesComparison(a, b)

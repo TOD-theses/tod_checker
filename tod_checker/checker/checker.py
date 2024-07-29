@@ -4,13 +4,21 @@ from typing import Literal, Sequence
 
 from tod_checker.state_changes.comparison import (
     StateChangesComparison,
+    add_world_state_diffs,
     compare_state_changes,
+    compare_world_state_diffs,
+    to_world_state_diff,
 )
-from tod_checker.types.types import PrePostState, WorldState
+from tod_checker.types.types import (
+    BlockWithTransactions,
+    PrePostState,
+    TxData,
+    WorldState,
+    WorldStateDiff,
+)
 from tod_checker.executor.executor import TransactionExecutor
 from tod_checker.state_changes.calculation import (
     overwrite_account_changes,
-    sum_state_changes,
     undo_state_changes,
 )
 from tod_checker.state_changes.fetcher import StateChangesFetcher
@@ -28,6 +36,14 @@ class ChangesForTx:
 class ReplayingStateOverrides:
     normal: WorldState
     reverse: WorldState
+
+
+@dataclass
+class TODCheckData:
+    tx: TxData
+    block: BlockWithTransactions
+    changes: PrePostState
+    overrides_normal: WorldState
 
 
 class ReplayDivergedException(Exception):
@@ -71,80 +87,130 @@ class TodChecker:
             raise StateChangesFetchingException(block_number) from e
 
     def is_TOD(
-        self, tx_a_hash: str, tx_b_hash: str
+        self, tx_a_hash: str, tx_b_hash: str, original_definition=True
     ) -> Literal[False] | StateChangesComparison:
         """
         Check if two transactions are TOD.
         Return False if they are not TOD, else a comparison of the transaction-order-dependent state changes by tx_b
         """
-        tx_b = self._tx_block_mapper.get_transaction(tx_b_hash)
-        block_b = self._tx_block_mapper.get_block(tx_b["blockNumber"])
-        changes_a = self._changes_for_tx(tx_a_hash)
-        changes_b = self._changes_for_tx(tx_b_hash)
-
-        state_overrides = self._compute_state_overrides(tx_a_hash, tx_b_hash)
+        a = self._prepare_data(tx_a_hash)
+        b = self._prepare_data(tx_b_hash)
 
         changes_b_normal = self.executor.simulate_with_state_changes(
-            tx_b,
-            state_overrides.normal,
+            b.tx,
+            b.overrides_normal,
         )
+        self._assert_not_diverging(b.tx, changes_b_normal, b.changes, b.block)
 
-        replay_comparison = self._compare_ignoring_gas_costs(
-            changes_b.by_tx, changes_b_normal, tx_b["from"], block_b["miner"]
-        )
-        if replay_comparison.differences():
-            raise ReplayDivergedException(
-                replay_comparison,
-                "The replay of transaction b is not close enough to the original",
-            )
+        overrides_reverse_b = deepcopy(b.overrides_normal)
+        overwrite_account_changes(overrides_reverse_b, a.changes["pre"])
 
         changes_b_reverse = self.executor.simulate_with_state_changes(
-            tx_b,
-            state_overrides.reverse,
+            b.tx,
+            overrides_reverse_b,
         )
 
-        self._sanity_check(
-            changes_a.by_tx, changes_b_normal, changes_b_reverse, tx_b["from"]
-        )
+        self._sanity_check(a.changes, changes_b_normal, changes_b_reverse, b.tx["from"])
 
-        comparison = self._compare_ignoring_gas_costs(
-            changes_b_normal, changes_b_reverse, tx_b["from"], block_b["miner"]
-        )
+        if original_definition:
+            _remove_gas_cost_changes(changes_b_normal, b.tx["from"], b.block["miner"])
+            _remove_gas_cost_changes(changes_b_reverse, b.tx["from"], b.block["miner"])
+            comparison = compare_state_changes(changes_b_normal, changes_b_reverse)
+        else:
+            # also compare changes from executing T_A after T_B
+            changes_a_normal = self.executor.simulate_with_state_changes(
+                a.tx,
+                a.overrides_normal,
+            )
+            self._assert_not_diverging(a.tx, changes_a_normal, a.changes, a.block)
+
+            overrides_reverse_a = deepcopy(a.overrides_normal)
+            overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
+
+            changes_a_reverse = self.executor.simulate_with_state_changes(
+                a.tx,
+                overrides_reverse_a,
+            )
+
+            _remove_gas_cost_changes(changes_a_normal, a.tx["from"], a.block["miner"])
+            _remove_gas_cost_changes(changes_a_reverse, a.tx["from"], a.block["miner"])
+            _remove_gas_cost_changes(changes_b_normal, b.tx["from"], b.block["miner"])
+            _remove_gas_cost_changes(changes_b_reverse, b.tx["from"], b.block["miner"])
+
+            diff_normal = add_world_state_diffs(
+                to_world_state_diff(changes_a_normal),
+                to_world_state_diff(changes_b_normal),
+            )
+            diff_reverse = add_world_state_diffs(
+                to_world_state_diff(changes_a_reverse),
+                to_world_state_diff(changes_b_reverse),
+            )
+
+            comparison = compare_world_state_diffs(diff_normal, diff_reverse)
 
         if not comparison.differences():
             return False
         return comparison
 
-    def _compare_ignoring_gas_costs(
-        self, changes_a: PrePostState, changes_b: PrePostState, sender: str, miner: str
-    ):
-        """Ignore gas costs, as these are not correct for Erigon currently"""
-        changes_a_copy = deepcopy(changes_a)
-        changes_b_copy = deepcopy(changes_b)
-        if miner.lower() in changes_a_copy["pre"]:
-            del changes_a_copy["pre"][miner.lower()]["balance"]
-            del changes_a_copy["post"][miner.lower()]["balance"]
-        if miner.lower() in changes_b_copy["pre"]:
-            del changes_b_copy["pre"][miner.lower()]["balance"]
-            del changes_b_copy["post"][miner.lower()]["balance"]
-        del changes_a_copy["pre"][sender.lower()]["balance"]
-        del changes_b_copy["pre"][sender.lower()]["balance"]
-        del changes_a_copy["post"][sender.lower()]["balance"]
-        del changes_b_copy["post"][sender.lower()]["balance"]
+    def _prepare_data(self, tx_hash: str) -> TODCheckData:
+        tx = self._tx_block_mapper.get_transaction(tx_hash)
+        block = self._tx_block_mapper.get_block(tx["blockNumber"])
+        changes = self._changes_for_tx(tx_hash)
+        overrides_normal = undo_state_changes([changes.by_tx, *changes.after_tx])["pre"]
 
-        comparison = compare_state_changes(changes_a_copy, changes_b_copy)
-        return comparison
-
-    def trace_both_scenarios(self, tx_a_hash: str, tx_b_hash: str) -> tuple[dict, dict]:
-        tx_b = self._tx_block_mapper.get_transaction(tx_b_hash)
-        state_overrides = self._compute_state_overrides(tx_a_hash, tx_b_hash)
-
-        traces_normal = self.executor.simulate_with_traces(tx_b, state_overrides.normal)
-        traces_reverse = self.executor.simulate_with_traces(
-            tx_b, state_overrides.reverse
+        return TODCheckData(
+            tx=tx,
+            block=block,
+            changes=changes.by_tx,
+            overrides_normal=overrides_normal,
         )
 
-        return (traces_normal, traces_reverse)
+    def _assert_not_diverging(
+        self,
+        tx: TxData,
+        original_changes: PrePostState,
+        replayed_changes: PrePostState,
+        block: BlockWithTransactions,
+    ):
+        replay_comparison = _compare_ignoring_gas_costs(
+            original_changes, replayed_changes, tx["from"], block["miner"]
+        )
+        if replay_comparison.differences():
+            raise ReplayDivergedException(
+                replay_comparison,
+                f"The replay of transaction {tx['hash']} is not close enough to the original",
+            )
+
+    def trace_both_scenarios(
+        self, tx_a_hash: str, tx_b_hash: str, original_definition=True
+    ) -> tuple[dict, dict] | tuple[dict, dict, dict, dict]:
+        a = self._prepare_data(tx_a_hash)
+        b = self._prepare_data(tx_b_hash)
+
+        overrides_reverse_b = deepcopy(b.overrides_normal)
+        overwrite_account_changes(overrides_reverse_b, a.changes["pre"])
+
+        changes_b_reverse = self.executor.simulate_with_state_changes(
+            b.tx,
+            overrides_reverse_b,
+        )
+
+        overrides_reverse_a = deepcopy(a.overrides_normal)
+        overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
+
+        traces_normal = self.executor.simulate_with_traces(b.tx, b.overrides_normal)
+        traces_reverse = self.executor.simulate_with_traces(b.tx, overrides_reverse_b)
+
+        if original_definition:
+            return (traces_normal, traces_reverse)
+        else:
+            traces_normal_a = self.executor.simulate_with_traces(
+                a.tx, a.overrides_normal
+            )
+            traces_reverse_a = self.executor.simulate_with_traces(
+                a.tx, overrides_reverse_a
+            )
+            return (traces_normal, traces_reverse, traces_normal_a, traces_reverse_a)
 
     def first_difference_in_traces(
         self, traces_a: dict, traces_b: dict
@@ -153,25 +219,6 @@ class TodChecker:
             if step_a != step_b:
                 return step_a, step_b
         return None
-
-    def _compute_state_overrides(
-        self, tx_a_hash: str, tx_b_hash: str
-    ) -> ReplayingStateOverrides:
-        changes_a = self._changes_for_tx(tx_a_hash)
-        changes_b = self._changes_for_tx(tx_b_hash)
-
-        block_reverting_changes = undo_state_changes(
-            [*changes_b.before_tx, changes_b.by_tx, *changes_b.after_tx]
-        )["pre"]
-        changes_up_to_b = sum_state_changes(changes_b.before_tx)["post"]
-
-        state_overrides_normal = block_reverting_changes
-        overwrite_account_changes(state_overrides_normal, changes_up_to_b)
-
-        state_overrides_reverse = deepcopy(state_overrides_normal)
-        overwrite_account_changes(state_overrides_reverse, changes_a.by_tx["pre"])
-
-        return ReplayingStateOverrides(state_overrides_normal, state_overrides_reverse)
 
     def _changes_for_tx(self, tx_hash: str) -> ChangesForTx:
         tx = self._tx_block_mapper.get_transaction(tx_hash)
@@ -223,3 +270,26 @@ class TodChecker:
                     assert (
                         val_normal == val_reverse
                     ), f"Differing {key} prestate at {addr}: {val_normal} vs {val_reverse}"
+
+
+def _compare_ignoring_gas_costs(
+    changes_a: PrePostState, changes_b: PrePostState, sender: str, miner: str
+):
+    """Ignore gas costs, as these are not correct for Erigon currently"""
+    changes_a_copy = deepcopy(changes_a)
+    changes_b_copy = deepcopy(changes_b)
+    _remove_gas_cost_changes(changes_a_copy, sender, miner)
+    _remove_gas_cost_changes(changes_b_copy, sender, miner)
+
+    comparison = compare_state_changes(changes_a_copy, changes_b_copy)
+    return comparison
+
+
+def _remove_gas_cost_changes(
+    changes: PrePostState | WorldStateDiff, sender: str, miner: str
+):
+    if miner.lower() in changes["pre"]:
+        del changes["pre"][miner.lower()]["balance"]
+        del changes["post"][miner.lower()]["balance"]
+    del changes["pre"][sender.lower()]["balance"]
+    del changes["post"][sender.lower()]["balance"]

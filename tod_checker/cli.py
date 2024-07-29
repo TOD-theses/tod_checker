@@ -104,7 +104,9 @@ def main():
         else:
             print("Creating traces")
             traces_dir.mkdir(exist_ok=True)
-            trace_normal, trace_reverse = checker.trace_both_scenarios(tx_a, tx_b)
+            traces = checker.trace_both_scenarios(tx_a, tx_b)
+            assert len(traces) == 2
+            trace_normal, trace_reverse = traces
 
             with open(path_normal, "w") as f:
                 json.dump(trace_normal, f, indent=2)

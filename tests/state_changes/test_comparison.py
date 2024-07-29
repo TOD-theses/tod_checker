@@ -1,5 +1,8 @@
-from tod_checker.state_changes.comparison import compare_state_changes
-from tod_checker.types.types import PrePostState, WorldState
+from tod_checker.state_changes.comparison import (
+    add_world_state_diffs,
+    compare_state_changes,
+)
+from tod_checker.types.types import PrePostState, WorldState, WorldStateDiff
 
 addr_1: str = "0xabcd"
 addr_2: str = "0xbbbb"
@@ -131,3 +134,13 @@ def test_comparison_removed_address():
 
     assert len(differences) == 1
     assert differences[0].key == ("balance", addr_1)
+
+
+def test_world_state_diff_sum():
+    a: WorldStateDiff = {"0xaddr": {"balance": 1234}}
+    b: WorldStateDiff = {"0xaddr": {"balance": 10}, "0xother": {"nonce": 1}}
+
+    state = add_world_state_diffs(a, b)
+
+    assert state["0xaddr"].get("balance") == 1244
+    assert state["0xother"].get("nonce") == 1
