@@ -22,6 +22,21 @@ def state_diff_fill_implicit_fields(state_diff: PrePostState) -> None:
         fill_implicit_prestate(pre[modified_addr], post[modified_addr])
         fill_poststate_with_unchanged_prestate(pre[modified_addr], post[modified_addr])
 
+    for addr in pre_addresses | post_addresses:
+        missing_fields = (set(pre[addr]) - set(post[addr])) | (
+            set(post[addr]) - set(pre[addr])
+        )
+        if missing_fields:
+            raise Exception(
+                f"Failed to fill implicit fields {missing_fields} for {addr}: "
+                + ", ".join(
+                    [
+                        f"{pre[addr].get(f)} vs {post[addr].get(f)}"
+                        for f in missing_fields
+                    ]
+                )
+            )
+
 
 def fill_implicit_prestate(prestate: AccountState, poststate: AccountState):
     if "nonce" in poststate and "nonce" not in prestate:
@@ -29,6 +44,8 @@ def fill_implicit_prestate(prestate: AccountState, poststate: AccountState):
         # thus we only decrement by 1 and hope it's correct
         # see https://github.com/erigontech/erigon/pull/10961
         prestate["nonce"] = poststate["nonce"] - 1
+    if "code" in poststate and "code" not in prestate:
+        prestate["code"] = "0x"
 
 
 def fill_poststate_with_unchanged_prestate(
