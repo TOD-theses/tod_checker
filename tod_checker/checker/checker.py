@@ -105,7 +105,7 @@ class TodChecker:
             b.tx,
             b.overrides_normal,
         )
-        self._assert_not_diverging(b.tx, changes_b_normal, b.changes, b.block)
+        self._assert_not_diverging(b.tx, b.changes, changes_b_normal, b.block)
 
         overrides_reverse_b = deepcopy(b.overrides_normal)
         overwrite_account_changes(overrides_reverse_b, a.changes["pre"])
@@ -129,7 +129,7 @@ class TodChecker:
                 a.tx,
                 a.overrides_normal,
             )
-            self._assert_not_diverging(a.tx, changes_a_normal, a.changes, a.block)
+            self._assert_not_diverging(a.tx, a.changes, changes_a_normal, a.block)
 
             overrides_reverse_a = deepcopy(a.overrides_normal)
             overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
@@ -293,8 +293,9 @@ def _remove_gas_cost_changes(
     if miner.lower() in changes["pre"]:
         del changes["pre"][miner.lower()]["balance"]
         del changes["post"][miner.lower()]["balance"]
-    del changes["pre"][sender.lower()]["balance"]
-    del changes["post"][sender.lower()]["balance"]
+    if "balance" in changes["pre"][sender.lower()]:
+        del changes["pre"][sender.lower()]["balance"]
+        del changes["post"][sender.lower()]["balance"]
 
 
 def _assert_enough_balance(tx: TxData, tx_changes: PrePostState, overrides: WorldState):
@@ -313,7 +314,7 @@ def _ether_used(tx: TxData, changes: PrePostState):
 
 
 def _get_balance(state: WorldState, addr: str) -> int:
-    balance = state[addr.lower()]["balance"] # type: ignore
-    if balance == '0x':
+    balance = state[addr.lower()]["balance"]  # type: ignore
+    if balance == "0x":
         return 0
     return int(balance, 16)
