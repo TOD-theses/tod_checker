@@ -52,6 +52,11 @@ class ReplayDivergedException(Exception):
         self.comparison = comparison
 
 
+class InsufficientEtherReplayException(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+
 class TransactionFetchingException(Exception):
     def __init__(self, tx: str) -> None:
         super().__init__(f"Could not fetch transaction {tx}")
@@ -105,6 +110,8 @@ class TodChecker:
         overrides_reverse_b = deepcopy(b.overrides_normal)
         overwrite_account_changes(overrides_reverse_b, a.changes["pre"])
 
+        _assert_enough_balance(b.tx, changes_b_normal, overrides_reverse_b)
+
         changes_b_reverse = self.executor.simulate_with_state_changes(
             b.tx,
             overrides_reverse_b,
@@ -126,6 +133,8 @@ class TodChecker:
 
             overrides_reverse_a = deepcopy(a.overrides_normal)
             overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
+
+            _assert_enough_balance(a.tx, changes_a_normal, overrides_reverse_a)
 
             changes_a_reverse = self.executor.simulate_with_state_changes(
                 a.tx,
@@ -286,3 +295,25 @@ def _remove_gas_cost_changes(
         del changes["post"][miner.lower()]["balance"]
     del changes["pre"][sender.lower()]["balance"]
     del changes["post"][sender.lower()]["balance"]
+
+
+def _assert_enough_balance(tx: TxData, tx_changes: PrePostState, overrides: WorldState):
+    used = _ether_used(tx, tx_changes)
+    balance = _get_balance(overrides, tx["from"])
+    if used > balance:
+        raise InsufficientEtherReplayException(
+            f'Transaction {tx["hash"]} has insufficient ether in the replay scenario (requires {used} Wei > {balance} Wei)'
+        )
+
+
+def _ether_used(tx: TxData, changes: PrePostState):
+    return _get_balance(changes["pre"], tx["from"]) - _get_balance(
+        changes["post"], tx["from"]
+    )
+
+
+def _get_balance(state: WorldState, addr: str) -> int:
+    balance = state[addr.lower()]["balance"] # type: ignore
+    if balance == '0x':
+        return 0
+    return int(balance, 16)

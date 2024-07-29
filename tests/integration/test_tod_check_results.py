@@ -1,6 +1,10 @@
 import pytest
 
-from tod_checker.checker.checker import ReplayDivergedException, TodChecker
+from tod_checker.checker.checker import (
+    InsufficientEtherReplayException,
+    ReplayDivergedException,
+    TodChecker,
+)
 from tod_checker.executor.executor import TransactionExecutor
 from tod_checker.rpc.override_formatter import OverridesFormatter
 from tod_checker.rpc.rpc import RPC
@@ -67,6 +71,21 @@ def test_replay_diverges(snapshot: PyTestSnapshotTest):
         checker.download_data_for_block(block)
 
     with pytest.raises(ReplayDivergedException):
+        checker.is_TOD(tx_a, tx_b)
+
+
+@pytest.mark.vcr
+def test_insufficient_ether_in_replay(snapshot: PyTestSnapshotTest):
+    tx_a = "0x009a4a436e300ebf4857126acb7599d7cc093c832ae9deb38dc3efcb69c2c995"
+    tx_b = "0x61a9a98fb61ad14360f71a4702ff920863da7c67e2c0e9392f138500b867228d"
+
+    checker = _get_checker()
+    block_a = checker.download_data_for_transaction(tx_a)
+    block_b = checker.download_data_for_transaction(tx_b)
+    for block in set((block_a, block_b)):
+        checker.download_data_for_block(block)
+
+    with pytest.raises(InsufficientEtherReplayException):
         checker.is_TOD(tx_a, tx_b)
 
 

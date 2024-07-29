@@ -17,6 +17,9 @@ def main():
     parser.add_argument("tx_a", type=str, help="Hash of the first transaction")
     parser.add_argument("tx_b", type=str, help="Hash of the second transaction")
     parser.add_argument(
+        "--tod-method", choices=("original", "adapted"), default="adapted"
+    )
+    parser.add_argument(
         "--traces-dir",
         type=Path,
         help="If provided, it will additionally store VM traces in this directory",
@@ -41,6 +44,7 @@ def main():
     args = parser.parse_args()
 
     tx_a, tx_b = args.tx_a, args.tx_b
+    use_original_method = args.tod_method == "original"
 
     print(f"Checking {tx_a} -> ... -> {tx_b} for TOD")
 
@@ -56,7 +60,7 @@ def main():
         checker.download_data_for_block(block)
 
     try:
-        result = checker.is_TOD(tx_a, tx_b)
+        result = checker.is_TOD(tx_a, tx_b, use_original_method)
     except ReplayDivergedException as e:
         print("Replay Diverged")
         for diff in e.comparison.differences():
