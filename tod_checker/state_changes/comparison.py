@@ -31,6 +31,8 @@ def resolve(state: WorldState | WorldStateDiff, key: StateKey) -> int | None:
         value = state.get(key[1], {}).get(key[0], {}).get(key[2])
     if value is None:
         return None
+    if value == "0x":
+        return 0
     if isinstance(value, str):
         return int(value, 16)
     return value
