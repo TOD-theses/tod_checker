@@ -24,6 +24,8 @@ from tod_checker.state_changes.calculation import (
 from tod_checker.state_changes.fetcher import StateChangesFetcher
 from tod_checker.tx_block_mapper.tx_block_mapper import TransactionBlockMapper
 
+TODMethod = Literal["original"] | Literal["adapted"] | Literal["fast-fail-adapted"]
+
 
 @dataclass
 class ChangesForTx:
@@ -92,7 +94,7 @@ class TodChecker:
             raise StateChangesFetchingException(block_number) from e
 
     def is_TOD(
-        self, tx_a_hash: str, tx_b_hash: str, original_definition=True
+        self, tx_a_hash: str, tx_b_hash: str, tod_method: TODMethod
     ) -> Literal[False] | StateChangesComparison:
         """
         Check if two transactions are TOD.
@@ -119,43 +121,59 @@ class TodChecker:
 
         self._sanity_check(a.changes, changes_b_normal, changes_b_reverse, b.tx["from"])
 
-        if original_definition:
-            _remove_gas_cost_changes(changes_b_normal, b.tx["from"], b.block["miner"])
-            _remove_gas_cost_changes(changes_b_reverse, b.tx["from"], b.block["miner"])
-            comparison = compare_state_changes(changes_b_normal, changes_b_reverse)
-        else:
-            # also compare changes from executing T_A after T_B
-            changes_a_normal = self.executor.simulate_with_state_changes(
-                a.tx,
-                a.overrides_normal,
-            )
-            self._assert_not_diverging(a.tx, a.changes, changes_a_normal, a.block)
+        changes_b_normal_no_gas_costs = deepcopy(changes_b_normal)
+        changes_b_reverse_no_gas_costs = deepcopy(changes_b_reverse)
+        _remove_gas_cost_changes(
+            changes_b_normal_no_gas_costs, b.tx["from"], b.block["miner"]
+        )
+        _remove_gas_cost_changes(
+            changes_b_reverse_no_gas_costs, b.tx["from"], b.block["miner"]
+        )
+        comparison = compare_state_changes(
+            changes_b_normal_no_gas_costs, changes_b_reverse_no_gas_costs
+        )
 
-            overrides_reverse_a = deepcopy(a.overrides_normal)
-            overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
+        result: Literal[False] | StateChangesComparison = (
+            comparison if comparison.differences() else False
+        )
 
-            _assert_enough_balance(a.tx, changes_a_normal, overrides_reverse_a)
+        if tod_method == "original":
+            return result
+        if tod_method == "fast-fail-adapted" and not result:
+            return result
 
-            changes_a_reverse = self.executor.simulate_with_state_changes(
-                a.tx,
-                overrides_reverse_a,
-            )
+        # also compare changes from executing T_A after T_B
+        changes_a_normal = self.executor.simulate_with_state_changes(
+            a.tx,
+            a.overrides_normal,
+        )
+        self._assert_not_diverging(a.tx, a.changes, changes_a_normal, a.block)
 
-            _remove_gas_cost_changes(changes_a_normal, a.tx["from"], a.block["miner"])
-            _remove_gas_cost_changes(changes_a_reverse, a.tx["from"], a.block["miner"])
-            _remove_gas_cost_changes(changes_b_normal, b.tx["from"], b.block["miner"])
-            _remove_gas_cost_changes(changes_b_reverse, b.tx["from"], b.block["miner"])
+        overrides_reverse_a = deepcopy(a.overrides_normal)
+        overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
 
-            diff_normal = add_world_state_diffs(
-                to_world_state_diff(changes_a_normal),
-                to_world_state_diff(changes_b_normal),
-            )
-            diff_reverse = add_world_state_diffs(
-                to_world_state_diff(changes_a_reverse),
-                to_world_state_diff(changes_b_reverse),
-            )
+        _assert_enough_balance(a.tx, changes_a_normal, overrides_reverse_a)
 
-            comparison = compare_world_state_diffs(diff_normal, diff_reverse)
+        changes_a_reverse = self.executor.simulate_with_state_changes(
+            a.tx,
+            overrides_reverse_a,
+        )
+
+        _remove_gas_cost_changes(changes_a_normal, a.tx["from"], a.block["miner"])
+        _remove_gas_cost_changes(changes_a_reverse, a.tx["from"], a.block["miner"])
+        _remove_gas_cost_changes(changes_b_normal, b.tx["from"], b.block["miner"])
+        _remove_gas_cost_changes(changes_b_reverse, b.tx["from"], b.block["miner"])
+
+        diff_normal = add_world_state_diffs(
+            to_world_state_diff(changes_a_normal),
+            to_world_state_diff(changes_b_normal),
+        )
+        diff_reverse = add_world_state_diffs(
+            to_world_state_diff(changes_a_reverse),
+            to_world_state_diff(changes_b_reverse),
+        )
+
+        comparison = compare_world_state_diffs(diff_normal, diff_reverse)
 
         if not comparison.differences():
             return False
