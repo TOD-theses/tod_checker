@@ -13,7 +13,7 @@ class StateChangeDifference:
     def __str__(self):
         msg = "<changes differ: "
         msg += "@".join(self.key)
-        msg += f" original: {self._format_change(self.original)} | other: {self._format_change(self.other)}>"
+        msg += f" normal: {self._format_change(self.original)} | reverse: {self._format_change(self.other)}>"
         return msg
 
     @staticmethod

@@ -35,7 +35,7 @@ def test_finds_TOD(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "original")
+    result = checker.is_TOD(tx_a, tx_b, "original", False)
 
     assert result is not False
 
@@ -52,7 +52,7 @@ def test_finds_TOD_adapted_definition(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "adapted")
+    result = checker.is_TOD(tx_a, tx_b, "adapted", False)
 
     assert result is not False
 
@@ -69,7 +69,7 @@ def test_non_TOD_fail_fast(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "fast-fail-adapted")
+    result = checker.is_TOD(tx_a, tx_b, "fast-fail-adapted", False)
 
     assert result is False
 
@@ -86,7 +86,7 @@ def test_replay_diverges(snapshot: PyTestSnapshotTest):
         checker.download_data_for_block(block)
 
     with pytest.raises(ReplayDivergedException):
-        checker.is_TOD(tx_a, tx_b, "original")
+        checker.is_TOD(tx_a, tx_b, "original", False)
 
 
 @pytest.mark.vcr
@@ -101,7 +101,7 @@ def test_insufficient_ether_in_replay(snapshot: PyTestSnapshotTest):
         checker.download_data_for_block(block)
 
     with pytest.raises(InsufficientEtherReplayException):
-        checker.is_TOD(tx_a, tx_b, "original")
+        checker.is_TOD(tx_a, tx_b, "original", False)
 
 
 @pytest.mark.vcr
@@ -114,6 +114,6 @@ def test_finds_non_TOD(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "original")
+    result = checker.is_TOD(tx_a, tx_b, "original", False)
 
     assert not result

@@ -48,8 +48,6 @@ def main():
     tx_a, tx_b = args.tx_a, args.tx_b
     tod_method = args.tod_method
 
-    print(f"Checking {tx_a} -> ... -> {tx_b} for TOD")
-
     rpc = RPC(args.provider, OverridesFormatter(args.provider_type))
     state_changes_fetcher = StateChangesFetcher(rpc)
     tx_block_mapper = TransactionBlockMapper(rpc)
@@ -61,12 +59,28 @@ def main():
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
 
+    if args.evaluate:
+        assert tod_method == "adapted", "Can only evaluate with --tod-method adapted"
+        result = checker.is_TOD(tx_a, tx_b, tod_method, True)
+        if result:
+            comparison_b, comparison_a = result
+            print("Transaction B differences:")
+            for diff in comparison_b.differences():
+                print(diff)
+            print()
+            print("Transaction A differences:")
+            for diff in comparison_a.differences():
+                print(diff)
+        else:
+            print("no TOD")
+        quit()
+
     try:
-        result = checker.is_TOD(tx_a, tx_b, tod_method)
+        result = checker.is_TOD(tx_a, tx_b, tod_method, False)
     except ReplayDivergedException as e:
         print("Replay Diverged")
         for diff in e.comparison.differences():
-            print(diff)
+            print("diverged at", diff)
         quit()
 
     if result:
@@ -81,39 +95,12 @@ def main():
         path_normal = traces_dir / f"{tx_a}_{tx_b}.json"
         path_reverse = traces_dir / f"{tx_b}_{tx_a}.json"
 
-        if args.evaluate:
-            with open(path_normal) as f_normal, open(path_reverse) as f_reverse:
-                trace_normal = json.load(f_normal)
-                trace_reverse = json.load(f_reverse)
-                first_diff_step = checker.first_difference_in_traces(
-                    trace_normal, trace_reverse
-                )
-                if first_diff_step:
-                    step_a, step_b = first_diff_step
-                    print(f'Traces differ at {step_a["op"]}!')
-                    for key in set(step_a) | set(step_b):
-                        if step_a.get(key) != step_b.get(key):
-                            if key == "storage":
-                                storage_a = step_a.get(key, {})
-                                storage_b = step_b.get(key, {})
-                                for slot in set(storage_a) | set(storage_b):
-                                    if storage_a.get(slot) != storage_b.get(slot):
-                                        print(
-                                            f"storage@{slot}",
-                                            storage_a.get(slot),
-                                            storage_b.get(slot),
-                                        )
-                            else:
-                                print(key, step_a.get(key), step_b.get(key))
-                else:
-                    print("Traces are equal!")
-        else:
-            print("Creating traces")
-            traces_dir.mkdir(exist_ok=True)
-            traces = checker.trace_both_scenarios(tx_a, tx_b)
-            trace_normal, trace_reverse, _, _ = traces
+        print("Creating traces")
+        traces_dir.mkdir(exist_ok=True)
+        traces = checker.trace_both_scenarios(tx_a, tx_b)
+        trace_normal, trace_reverse, _, _ = traces
 
-            with open(path_normal, "w") as f:
-                json.dump(trace_normal, f, indent=2)
-            with open(path_reverse, "w") as f:
-                json.dump(trace_reverse, f, indent=2)
+        with open(path_normal, "w") as f:
+            json.dump(trace_normal, f, indent=2)
+        with open(path_reverse, "w") as f:
+            json.dump(trace_reverse, f, indent=2)

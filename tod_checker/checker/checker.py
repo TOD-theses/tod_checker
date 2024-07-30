@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Literal, Sequence
+from typing import Literal, Sequence, overload
 
 from tod_checker.state_changes.comparison import (
     StateChangesComparison,
@@ -93,9 +93,31 @@ class TodChecker:
         except Exception as e:
             raise StateChangesFetchingException(block_number) from e
 
+    @overload
     def is_TOD(
-        self, tx_a_hash: str, tx_b_hash: str, tod_method: TODMethod
-    ) -> Literal[False] | StateChangesComparison:
+        self,
+        tx_a_hash: str,
+        tx_b_hash: str,
+        tod_method: TODMethod,
+        all_changes: Literal[False],
+    ) -> Literal[False] | StateChangesComparison: ...
+
+    @overload
+    def is_TOD(
+        self,
+        tx_a_hash: str,
+        tx_b_hash: str,
+        tod_method: TODMethod,
+        all_changes: Literal[True],
+    ) -> tuple[StateChangesComparison, StateChangesComparison]: ...
+
+    def is_TOD(
+        self, tx_a_hash: str, tx_b_hash: str, tod_method: TODMethod, all_changes=False
+    ) -> (
+        Literal[False]
+        | StateChangesComparison
+        | tuple[StateChangesComparison, StateChangesComparison]
+    ):
         """
         Check if two transactions are TOD.
         Return False if they are not TOD, else a comparison of the transaction-order-dependent state changes by tx_b
@@ -129,12 +151,12 @@ class TodChecker:
         _remove_gas_cost_changes(
             changes_b_reverse_no_gas_costs, b.tx["from"], b.block["miner"]
         )
-        comparison = compare_state_changes(
+        comparison_b = compare_state_changes(
             changes_b_normal_no_gas_costs, changes_b_reverse_no_gas_costs
         )
 
         result: Literal[False] | StateChangesComparison = (
-            comparison if comparison.differences() else False
+            comparison_b if comparison_b.differences() else False
         )
 
         if tod_method == "original":
@@ -173,11 +195,15 @@ class TodChecker:
             to_world_state_diff(changes_b_reverse),
         )
 
-        comparison = compare_world_state_diffs(diff_normal, diff_reverse)
+        comparison_both = compare_world_state_diffs(diff_normal, diff_reverse)
 
-        if not comparison.differences():
+        if all_changes:
+            comparison_a = compare_state_changes(changes_a_normal, changes_a_reverse)
+            return (comparison_b, comparison_a)
+
+        if not comparison_both.differences():
             return False
-        return comparison
+        return comparison_both
 
     def _prepare_data(self, tx_hash: str) -> TODCheckData:
         tx = self._tx_block_mapper.get_transaction(tx_hash)
