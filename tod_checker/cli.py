@@ -19,7 +19,7 @@ def main():
     parser.add_argument(
         "--tod-method",
         choices=("original", "adapted", "fast-fail-adapted"),
-        default="fast-fail-adapted",
+        default="adapted",
     )
     parser.add_argument(
         "--traces-dir",
