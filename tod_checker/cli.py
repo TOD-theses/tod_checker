@@ -49,7 +49,7 @@ def main():
         checker.download_data_for_block(block)
 
     try:
-        result = checker.is_TOD(tx_a, tx_b)
+        result = checker.check(tx_a, tx_b)
         tx_a_differences = result.tx_a_comparison.differences()
         tx_b_differences = result.tx_b_comparison.differences()
         overall_differences = result.overall_comparison.differences()

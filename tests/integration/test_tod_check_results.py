@@ -35,7 +35,7 @@ def test_finds_TOD_approximation(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b)
+    result = checker.check(tx_a, tx_b)
 
     assert result.is_approximately_TOD()
     snapshot.assert_match(result.tx_b_comparison.differences(), "differences")
@@ -51,7 +51,7 @@ def test_finds_TOD_overall_definition(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b)
+    result = checker.check(tx_a, tx_b)
 
     assert result.is_overall_TOD()
     snapshot.assert_match(result.overall_comparison.differences(), "differences")
@@ -69,7 +69,7 @@ def test_replay_diverges(snapshot: PyTestSnapshotTest):
         checker.download_data_for_block(block)
 
     with pytest.raises(ReplayDivergedException):
-        checker.is_TOD(tx_a, tx_b)
+        checker.check(tx_a, tx_b)
 
 
 @pytest.mark.vcr
@@ -84,7 +84,7 @@ def test_insufficient_ether_in_replay(snapshot: PyTestSnapshotTest):
         checker.download_data_for_block(block)
 
     with pytest.raises(InsufficientEtherReplayException):
-        checker.is_TOD(tx_a, tx_b)
+        checker.check(tx_a, tx_b)
 
 
 @pytest.mark.vcr
@@ -97,6 +97,6 @@ def test_finds_non_TOD(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b)
+    result = checker.check(tx_a, tx_b)
 
     assert not result.is_overall_TOD()

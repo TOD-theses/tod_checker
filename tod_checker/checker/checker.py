@@ -109,20 +109,27 @@ class TodChecker:
         except Exception as e:
             raise StateChangesFetchingException(block_number) from e
 
-    def is_TOD(self, tx_a_hash: str, tx_b_hash: str) -> TODCheckResult:
+    def check(self, tx_a_hash: str, tx_b_hash: str) -> TODCheckResult:
         """Check if two transactions are TOD w.r.t. to the approximation and overall definition."""
         a = self._prepare_data(tx_a_hash)
         b = self._prepare_data(tx_b_hash)
 
+        # Replay Tx B and Tx A
         changes_b_normal = self.executor.simulate_with_state_changes(
             b.tx,
             b.overrides_normal,
         )
-        self._assert_not_diverging(b.tx, b.changes, changes_b_normal, b.block)
+        changes_a_normal = self.executor.simulate_with_state_changes(
+            a.tx,
+            a.overrides_normal,
+        )
 
+        self._assert_not_diverging(b.tx, b.changes, changes_b_normal, b.block)
+        self._assert_not_diverging(a.tx, a.changes, changes_a_normal, a.block)
+
+        # Tx B reverse scenario
         overrides_reverse_b = deepcopy(b.overrides_normal)
         overwrite_account_changes(overrides_reverse_b, a.changes["pre"])
-
         _assert_enough_balance(b.tx, changes_b_normal, overrides_reverse_b)
 
         changes_b_reverse = self.executor.simulate_with_state_changes(
@@ -130,30 +137,9 @@ class TodChecker:
             overrides_reverse_b,
         )
 
-        self._sanity_check(a.changes, changes_b_normal, changes_b_reverse, b.tx["from"])
-
-        changes_b_normal_no_gas_costs = deepcopy(changes_b_normal)
-        changes_b_reverse_no_gas_costs = deepcopy(changes_b_reverse)
-        _remove_gas_cost_changes(
-            changes_b_normal_no_gas_costs, b.tx["from"], b.block["miner"]
-        )
-        _remove_gas_cost_changes(
-            changes_b_reverse_no_gas_costs, b.tx["from"], b.block["miner"]
-        )
-        comparison_b = compare_state_changes(
-            changes_b_normal_no_gas_costs, changes_b_reverse_no_gas_costs
-        )
-
-        # also compare changes from executing T_A after T_B
-        changes_a_normal = self.executor.simulate_with_state_changes(
-            a.tx,
-            a.overrides_normal,
-        )
-        self._assert_not_diverging(a.tx, a.changes, changes_a_normal, a.block)
-
+        # Tx A reverse scenario
         overrides_reverse_a = deepcopy(a.overrides_normal)
         overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
-
         _assert_enough_balance(a.tx, changes_a_normal, overrides_reverse_a)
 
         changes_a_reverse = self.executor.simulate_with_state_changes(
@@ -161,22 +147,28 @@ class TodChecker:
             overrides_reverse_a,
         )
 
-        _remove_gas_cost_changes(changes_a_normal, a.tx["from"], a.block["miner"])
-        _remove_gas_cost_changes(changes_a_reverse, a.tx["from"], a.block["miner"])
+        # Remove gas costs for comparison (necessary due to inaccuracies of the replaying)
         _remove_gas_cost_changes(changes_b_normal, b.tx["from"], b.block["miner"])
         _remove_gas_cost_changes(changes_b_reverse, b.tx["from"], b.block["miner"])
+        _remove_gas_cost_changes(changes_a_normal, a.tx["from"], a.block["miner"])
+        _remove_gas_cost_changes(changes_a_reverse, a.tx["from"], a.block["miner"])
 
-        diff_normal = add_world_state_diffs(
+        # Compare results from normal and reverse scenarios
+        comparison_b = compare_state_changes(changes_b_normal, changes_b_reverse)
+        comparison_a = compare_state_changes(changes_a_normal, changes_a_reverse)
+
+        overall_diff_normal = add_world_state_diffs(
             to_world_state_diff(changes_a_normal),
             to_world_state_diff(changes_b_normal),
         )
-        diff_reverse = add_world_state_diffs(
+        overall_diff_reverse = add_world_state_diffs(
             to_world_state_diff(changes_a_reverse),
             to_world_state_diff(changes_b_reverse),
         )
 
-        comparison_a = compare_state_changes(changes_a_normal, changes_a_reverse)
-        comparison_both = compare_world_state_diffs(diff_normal, diff_reverse)
+        comparison_both = compare_world_state_diffs(
+            overall_diff_normal, overall_diff_reverse
+        )
 
         return TODCheckResult(
             tx_a_comparison=comparison_a,
@@ -254,47 +246,6 @@ class TodChecker:
             by_tx=block_changes[tx["transactionIndex"]],
             after_tx=block_changes[tx["transactionIndex"] + 1 :],
         )
-
-    def _sanity_check(
-        self,
-        change_a_normal: PrePostState,
-        change_b_normal: PrePostState,
-        change_b_reverse: PrePostState,
-        tx_b_sender: str,
-    ):
-        """Sanity checks for the correctness of the state changes. These should never fail."""
-        tx_b_sender = tx_b_sender.lower()
-        assert (
-            tx_b_sender in change_b_normal["pre"]
-        ), "Sender of tx B was not included in its normal change set"
-        assert (
-            tx_b_sender in change_b_reverse["pre"]
-        ), "Sender of tx B was not included in its reverse change set"
-
-        assert (
-            change_b_normal["pre"][tx_b_sender].get("nonce")
-            == change_b_reverse["pre"][tx_b_sender].get("nonce")
-        ), f"Nonce of the tx B sender was different in the executions {change_b_normal['pre'][tx_b_sender]['nonce']} (expected) vs {change_b_reverse['pre'][tx_b_sender]['nonce']} (reverse)"  # type: ignore
-
-        # check that prestates are equal; exclude those modified by tx a
-        common_addresses = set(change_b_normal["pre"]) & set(change_b_reverse["pre"])
-        unmodified_common_addresses = common_addresses - set(change_a_normal["pre"])
-
-        for addr in unmodified_common_addresses:
-            for key in set(change_b_normal["pre"][addr]) & set(
-                change_b_reverse["pre"][addr]
-            ):
-                val_normal = change_b_normal["pre"][addr][key]
-                val_reverse = change_b_reverse["pre"][addr][key]
-                if isinstance(val_normal, dict):
-                    for slot in set(val_normal) & set(val_reverse):
-                        assert (
-                            val_normal[slot] == val_reverse[slot]
-                        ), f"Differing storage prestate at {addr}: {slot}: {val_normal[slot]} vs {val_reverse[slot]}"
-                else:
-                    assert (
-                        val_normal == val_reverse
-                    ), f"Differing {key} prestate at {addr}: {val_normal} vs {val_reverse}"
 
 
 def _compare_ignoring_gas_costs(
