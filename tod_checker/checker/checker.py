@@ -1,8 +1,10 @@
 from copy import deepcopy
 from dataclasses import dataclass
+import dataclasses
 from typing import Literal, Sequence
 
 from tod_checker.state_changes.comparison import (
+    StateChangeDifference,
     StateChangesComparison,
     add_world_state_diffs,
     compare_state_changes,
@@ -62,6 +64,21 @@ class TODCheckResult:
 
     def is_overall_TOD(self):
         return len(self.overall_comparison.differences()) > 0
+
+    def as_dict(self) -> dict:
+        return {
+            "approximately TOD": self.is_approximately_TOD(),
+            "overall TOD": self.is_overall_TOD(),
+            "differences": {
+                "a": self._diffs_dict(self.tx_a_comparison.differences()),
+                "b": self._diffs_dict(self.tx_b_comparison.differences()),
+                "overall": self._diffs_dict(self.overall_comparison.differences()),
+            },
+        }
+
+    @staticmethod
+    def _diffs_dict(diffs: Sequence[StateChangeDifference]) -> Sequence[dict]:
+        return [dataclasses.asdict(diff) for diff in diffs]
 
 
 class ReplayDivergedException(Exception):

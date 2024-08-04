@@ -1,19 +1,19 @@
 from typing import Iterable, Sequence
 
-from attr import dataclass
+from dataclasses import dataclass
 from tod_checker.types.types import PrePostState, StateKey, WorldState, WorldStateDiff
 
 
 @dataclass
 class StateChangeDifference:
     key: StateKey
-    original: int
-    other: int
+    normal: int
+    reverse: int
 
     def __str__(self):
         msg = "<changes differ: "
         msg += "@".join(self.key)
-        msg += f" normal: {self._format_change(self.original)} | reverse: {self._format_change(self.other)}>"
+        msg += f" normal: {self._format_change(self.normal)} | reverse: {self._format_change(self.reverse)}>"
         return msg
 
     @staticmethod

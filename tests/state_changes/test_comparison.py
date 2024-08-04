@@ -146,8 +146,8 @@ def test_comparison_diff_result():
     differences = compare_state_changes(a, b).differences()
 
     assert len(differences) == 1
-    assert differences[0].original == 0xBBBB - 0xAAAA
-    assert differences[0].other == 0x0
+    assert differences[0].normal == 0xBBBB - 0xAAAA
+    assert differences[0].reverse == 0x0
 
 
 def test_world_state_diff_sum():

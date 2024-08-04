@@ -1,3 +1,4 @@
+import json
 import pytest
 
 from tod_checker.checker.checker import (
@@ -100,3 +101,19 @@ def test_finds_non_TOD(snapshot: PyTestSnapshotTest):
     result = checker.check(tx_a, tx_b)
 
     assert not result.is_overall_TOD()
+
+
+@pytest.mark.vcr
+def test_can_serialize_TOD_result(snapshot: PyTestSnapshotTest):
+    tx_a = "0x0001e7b0bcf0c41941c5d53c8636139565456343e8fad9bc86609329e63cb350"
+    tx_b = "0xa3cc046ea030d51a16ee32514650f82ea9e41d1270ec2c1a749e5087b1fde4ce"
+
+    checker = _get_checker()
+    block_a = checker.download_data_for_transaction(tx_a)
+    block_b = checker.download_data_for_transaction(tx_b)
+    for block in set((block_a, block_b)):
+        checker.download_data_for_block(block)
+    result = checker.check(tx_a, tx_b)
+
+    result_json = json.dumps(result.as_dict())
+    snapshot.assert_match(result_json, "json")
