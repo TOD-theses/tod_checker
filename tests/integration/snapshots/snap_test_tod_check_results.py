@@ -7,7 +7,7 @@ from snapshottest import GenericRepr, Snapshot
 
 snapshots = Snapshot()
 
-snapshots["test_finds_TOD differences"] = [
+snapshots["test_finds_TOD_approximation differences"] = [
     GenericRepr(
         "StateChangeDifference(key=('balance', '0x6b75d8af000000e20b7a7ddf000ba900b4009a80'), original=41, other=0)"
     ),
@@ -58,7 +58,7 @@ snapshots["test_finds_TOD differences"] = [
     ),
 ]
 
-snapshots["test_finds_TOD_adapted_definition differences"] = [
+snapshots["test_finds_TOD_overall_definition differences"] = [
     GenericRepr(
         "StateChangeDifference(key=('balance', '0x6b75d8af000000e20b7a7ddf000ba900b4009a80'), original=41, other=0)"
     ),

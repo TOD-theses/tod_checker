@@ -88,6 +88,13 @@ class RPC:
         elif tracing_type == "prestate":
             options["tracer"] = "prestateTracer"
             options["tracerConfig"] = {"diffMode": False}
+        else:
+            options["tracerConfig"] = {
+                "enableMemory": True,
+                "disableStack": False,
+                "disableStorage": True,
+                "enableReturnData": False,
+            }
 
         tx_params = tx_data_to_tx_params(tx)
         trace: AttributeDict = self.w3.eth.debug_traceCall(  # type: ignore

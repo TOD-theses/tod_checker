@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Literal, Sequence, overload
+from typing import Literal, Sequence
 
 from tod_checker.state_changes.comparison import (
     StateChangesComparison,
@@ -48,6 +48,22 @@ class TODCheckData:
     overrides_normal: WorldState
 
 
+@dataclass
+class TODCheckResult:
+    tx_a_comparison: StateChangesComparison
+    """tx_a_comparison is the addition for the overall comparison"""
+    tx_b_comparison: StateChangesComparison
+    """tx_b_comparison is the approximation, only covering changes of tx_b"""
+    overall_comparison: StateChangesComparison
+    """overall_comparison compares the changes of tx_a and tx_b together"""
+
+    def is_approximately_TOD(self):
+        return len(self.tx_b_comparison.differences()) > 0
+
+    def is_overall_TOD(self):
+        return len(self.overall_comparison.differences()) > 0
+
+
 class ReplayDivergedException(Exception):
     def __init__(self, comparison: StateChangesComparison, *args: object) -> None:
         super().__init__(*args)
@@ -93,35 +109,8 @@ class TodChecker:
         except Exception as e:
             raise StateChangesFetchingException(block_number) from e
 
-    @overload
-    def is_TOD(
-        self,
-        tx_a_hash: str,
-        tx_b_hash: str,
-        tod_method: TODMethod,
-        all_changes: Literal[False],
-    ) -> Literal[False] | StateChangesComparison: ...
-
-    @overload
-    def is_TOD(
-        self,
-        tx_a_hash: str,
-        tx_b_hash: str,
-        tod_method: TODMethod,
-        all_changes: Literal[True],
-    ) -> tuple[StateChangesComparison, StateChangesComparison]: ...
-
-    def is_TOD(
-        self, tx_a_hash: str, tx_b_hash: str, tod_method: TODMethod, all_changes=False
-    ) -> (
-        Literal[False]
-        | StateChangesComparison
-        | tuple[StateChangesComparison, StateChangesComparison]
-    ):
-        """
-        Check if two transactions are TOD.
-        Return False if they are not TOD, else a comparison of the transaction-order-dependent state changes by tx_b
-        """
+    def is_TOD(self, tx_a_hash: str, tx_b_hash: str) -> TODCheckResult:
+        """Check if two transactions are TOD w.r.t. to the approximation and overall definition."""
         a = self._prepare_data(tx_a_hash)
         b = self._prepare_data(tx_b_hash)
 
@@ -155,15 +144,6 @@ class TodChecker:
             changes_b_normal_no_gas_costs, changes_b_reverse_no_gas_costs
         )
 
-        result: Literal[False] | StateChangesComparison = (
-            comparison_b if comparison_b.differences() else False
-        )
-
-        if tod_method == "original":
-            return result
-        if tod_method == "fast-fail-adapted" and not result:
-            return result
-
         # also compare changes from executing T_A after T_B
         changes_a_normal = self.executor.simulate_with_state_changes(
             a.tx,
@@ -195,15 +175,14 @@ class TodChecker:
             to_world_state_diff(changes_b_reverse),
         )
 
+        comparison_a = compare_state_changes(changes_a_normal, changes_a_reverse)
         comparison_both = compare_world_state_diffs(diff_normal, diff_reverse)
 
-        if all_changes:
-            comparison_a = compare_state_changes(changes_a_normal, changes_a_reverse)
-            return (comparison_b, comparison_a)
-
-        if not comparison_both.differences():
-            return False
-        return comparison_both
+        return TODCheckResult(
+            tx_a_comparison=comparison_a,
+            tx_b_comparison=comparison_b,
+            overall_comparison=comparison_both,
+        )
 
     def _prepare_data(self, tx_hash: str) -> TODCheckData:
         tx = self._tx_block_mapper.get_transaction(tx_hash)

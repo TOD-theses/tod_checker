@@ -26,7 +26,7 @@ def _get_checker():
 
 
 @pytest.mark.vcr
-def test_finds_TOD(snapshot: PyTestSnapshotTest):
+def test_finds_TOD_approximation(snapshot: PyTestSnapshotTest):
     tx_a = "0x0001e7b0bcf0c41941c5d53c8636139565456343e8fad9bc86609329e63cb350"
     tx_b = "0xa3cc046ea030d51a16ee32514650f82ea9e41d1270ec2c1a749e5087b1fde4ce"
 
@@ -35,15 +35,14 @@ def test_finds_TOD(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "original", False)
+    result = checker.is_TOD(tx_a, tx_b)
 
-    assert result is not False
-
-    snapshot.assert_match(result.differences(), "differences")
+    assert result.is_approximately_TOD()
+    snapshot.assert_match(result.tx_b_comparison.differences(), "differences")
 
 
 @pytest.mark.vcr
-def test_finds_TOD_adapted_definition(snapshot: PyTestSnapshotTest):
+def test_finds_TOD_overall_definition(snapshot: PyTestSnapshotTest):
     tx_a = "0x0001e7b0bcf0c41941c5d53c8636139565456343e8fad9bc86609329e63cb350"
     tx_b = "0xa3cc046ea030d51a16ee32514650f82ea9e41d1270ec2c1a749e5087b1fde4ce"
 
@@ -52,26 +51,10 @@ def test_finds_TOD_adapted_definition(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "adapted", False)
+    result = checker.is_TOD(tx_a, tx_b)
 
-    assert result is not False
-
-    snapshot.assert_match(result.differences(), "differences")
-
-
-@pytest.mark.vcr
-def test_non_TOD_fail_fast(snapshot: PyTestSnapshotTest):
-    tx_a = "0x000a3e22cc7b60cc63cf5edb85d5f09010b37a59ee4188b9888a7113d36e7e17"
-    tx_b = "0x2e86626089b30f0d89bac6c6c0c90423ebfc15657c38c62183cafe29b7f9d478"
-
-    checker = _get_checker()
-    block_a = checker.download_data_for_transaction(tx_a)
-    block_b = checker.download_data_for_transaction(tx_b)
-    for block in set((block_a, block_b)):
-        checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "fast-fail-adapted", False)
-
-    assert result is False
+    assert result.is_overall_TOD()
+    snapshot.assert_match(result.overall_comparison.differences(), "differences")
 
 
 @pytest.mark.vcr
@@ -86,7 +69,7 @@ def test_replay_diverges(snapshot: PyTestSnapshotTest):
         checker.download_data_for_block(block)
 
     with pytest.raises(ReplayDivergedException):
-        checker.is_TOD(tx_a, tx_b, "original", False)
+        checker.is_TOD(tx_a, tx_b)
 
 
 @pytest.mark.vcr
@@ -101,7 +84,7 @@ def test_insufficient_ether_in_replay(snapshot: PyTestSnapshotTest):
         checker.download_data_for_block(block)
 
     with pytest.raises(InsufficientEtherReplayException):
-        checker.is_TOD(tx_a, tx_b, "original", False)
+        checker.is_TOD(tx_a, tx_b)
 
 
 @pytest.mark.vcr
@@ -114,6 +97,6 @@ def test_finds_non_TOD(snapshot: PyTestSnapshotTest):
     block_b = checker.download_data_for_transaction(tx_b)
     for block in set((block_a, block_b)):
         checker.download_data_for_block(block)
-    result = checker.is_TOD(tx_a, tx_b, "original", False)
+    result = checker.is_TOD(tx_a, tx_b)
 
-    assert not result
+    assert not result.is_overall_TOD()

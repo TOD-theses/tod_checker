@@ -33,5 +33,5 @@ class TransactionExecutor:
             "vmTrace",
         )
 
-    def replay_with_traces(self, tx_hash: str) -> dict:
-        return self._rpc.debug_trace_transaction(tx_hash)
+    # def replay_with_traces(self, tx_hash: str) -> dict:
+    #     return self._rpc.debug_trace_transaction(tx_hash)
