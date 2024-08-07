@@ -1,7 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 import dataclasses
-from typing import Literal, Sequence
+from typing import Any, Literal, Sequence
 
 from tod_checker.state_changes.comparison import (
     StateChangeDifference,
@@ -15,6 +15,7 @@ from tod_checker.types.types import (
     BlockWithTransactions,
     PrePostState,
     TxData,
+    TxScenarioBundle,
     WorldState,
     WorldStateDiff,
 )
@@ -245,6 +246,45 @@ class TodChecker:
         traces_normal_a = self.executor.simulate_with_traces(a.tx, a.overrides_normal)
         traces_reverse_a = self.executor.simulate_with_traces(a.tx, overrides_reverse_a)
         return (traces_normal, traces_reverse, traces_normal_a, traces_reverse_a)
+
+    def js_trace_scenarios(
+        self, tx_a_hash: str, tx_b_hash: str, js_tracer: str, config={}
+    ) -> TxScenarioBundle[Any]:
+        a = self._prepare_data(tx_a_hash)
+        b = self._prepare_data(tx_b_hash)
+
+        overrides_reverse_b = deepcopy(b.overrides_normal)
+        overwrite_account_changes(overrides_reverse_b, a.changes["pre"])
+
+        changes_b_reverse = self.executor.simulate_with_state_changes(
+            b.tx,
+            overrides_reverse_b,
+        )
+
+        overrides_reverse_a = deepcopy(a.overrides_normal)
+        overwrite_account_changes(overrides_reverse_a, changes_b_reverse["post"])
+
+        traces_normal_b = self.executor.simulate_with_js_tracer(
+            b.tx, b.overrides_normal, js_tracer, config
+        )
+        traces_reverse_b = self.executor.simulate_with_js_tracer(
+            b.tx, overrides_reverse_b, js_tracer, config
+        )
+
+        traces_normal_a = self.executor.simulate_with_js_tracer(
+            a.tx, a.overrides_normal, js_tracer, config
+        )
+        traces_reverse_a = self.executor.simulate_with_js_tracer(
+            a.tx, overrides_reverse_a, js_tracer, config
+        )
+
+        return TxScenarioBundle(
+            tx_a_normal=traces_normal_a,
+            tx_a_reverse=traces_reverse_a,
+            tx_b_normal=traces_normal_b,
+            tx_b_reverse=traces_reverse_b,
+        )
+        return (traces_normal_b, traces_reverse_b, traces_normal_a, traces_reverse_a)
 
     def first_difference_in_traces(
         self, traces_a: dict, traces_b: dict

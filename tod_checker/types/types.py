@@ -1,4 +1,5 @@
-from typing import Sequence, TypedDict
+from dataclasses import dataclass
+from typing import Generic, Sequence, TypeVar, TypedDict
 
 TxData = TypedDict(
     "TxData",
@@ -95,6 +96,23 @@ class PrePostState(TypedDict):
 class TxStateDiff(TypedDict):
     txHash: str
     result: PrePostState
+
+
+T = TypeVar("T")
+
+
+@dataclass
+class TxScenarioBundle(Generic[T]):
+    tx_a_normal: T
+    tx_a_reverse: T
+    tx_b_normal: T
+    tx_b_reverse: T
+
+
+@dataclass
+class TxBundle(Generic[T]):
+    tx_a: T
+    tx_B: T
 
 
 # (type, addr) or ('storage', addr, slot)

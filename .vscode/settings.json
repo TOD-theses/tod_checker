@@ -4,5 +4,6 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.analysis.include": ["tests", "tod_checker"]
+    "python.analysis.include": ["tests", "tod_checker"],
+    "python.defaultInterpreterPath": "./.venv/bin/python"
 }

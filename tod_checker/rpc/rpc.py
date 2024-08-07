@@ -103,6 +103,33 @@ class RPC:
 
         return _attribute_dict_to_dict(trace)
 
+    def debug_trace_call_with_js_tracer(
+        self,
+        tx: TxData,
+        block_number: int,
+        state_overrides: WorldState,
+        block_overrides: dict[str, str],
+        js_tracer: str,
+        tracer_config: dict,
+    ) -> PrePostState:
+        overrides = dict(
+            (key, self.overrides_formatter.format(acc))
+            for key, acc in list(state_overrides.items())
+        )
+        options: dict = {
+            "stateOverrides": overrides,
+            "blockOverrides": block_overrides,
+            "tracer": js_tracer,
+            "tracerConfig": tracer_config,
+        }
+
+        tx_params = tx_data_to_tx_params(tx)
+        trace: AttributeDict = self.w3.eth.debug_traceCall(  # type: ignore
+            tx_params, hex(block_number), options
+        )
+
+        return _attribute_dict_to_dict(trace)
+
     def debug_trace_transaction(self, tx_hash: str) -> dict:
         trace: AttributeDict = self.w3.eth.debug_traceTransaction(tx_hash)  # type: ignore
         return _attribute_dict_to_dict(trace)

@@ -33,5 +33,17 @@ class TransactionExecutor:
             "vmTrace",
         )
 
+    def simulate_with_js_tracer(
+        self, tx: TxData, state_overrides: WorldState, js_tracer: str, config={}
+    ):
+        return self._rpc.debug_trace_call_with_js_tracer(
+            tx,
+            tx["blockNumber"],
+            state_overrides,
+            {"number": hex(tx["blockNumber"])},
+            js_tracer,
+            config,
+        )
+
     # def replay_with_traces(self, tx_hash: str) -> dict:
     #     return self._rpc.debug_trace_transaction(tx_hash)

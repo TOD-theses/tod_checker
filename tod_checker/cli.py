@@ -4,6 +4,10 @@ from argparse import ArgumentParser
 import json
 from pathlib import Path
 
+from tod_checker.currency_changes.properties.securify import check_securify_properties
+from tod_checker.currency_changes.tracer.currency_changes_js_tracer import (
+    CurrencyChangesJSTracer,
+)
 from tod_checker.checker.checker import ReplayDivergedException, TodChecker
 from tod_checker.rpc.override_formatter import OverridesFormatter
 from tod_checker.rpc.rpc import RPC
@@ -33,9 +37,11 @@ def main():
         choices=["old Erigon", "reth"],
         help="Some fine tuning for peculiarities of the providers",
     )
+    parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
 
     tx_a, tx_b = args.tx_a, args.tx_b
+    verbose: bool = args.verbose
 
     rpc = RPC(args.provider, OverridesFormatter(args.provider_type))
     state_changes_fetcher = StateChangesFetcher(rpc)
@@ -55,16 +61,34 @@ def main():
         overall_differences = result.overall_comparison.differences()
         print(f"Approximately TOD: {result.is_approximately_TOD()}")
         print(f"Overall TOD:       {result.is_overall_TOD()}")
-        print("Differences between the normal and reverse scenario:")
-        print(f"Overall: {len(overall_differences)}")
-        print(*overall_differences, sep="\n")
-        print()
-        print(f"Tx B: {len(tx_b_differences)}")
-        print(*tx_b_differences, sep="\n")
-        print()
-        print(f"Tx A: {len(tx_a_differences)}")
-        print(*tx_a_differences, sep="\n")
-        print()
+        if verbose:
+            print("Differences between the normal and reverse scenario:")
+            print(f"Overall: {len(overall_differences)}")
+            print(*overall_differences, sep="\n")
+            print()
+            print(f"Tx B: {len(tx_b_differences)}")
+            print(*tx_b_differences, sep="\n")
+            print()
+            print(f"Tx A: {len(tx_a_differences)}")
+            print(*tx_a_differences, sep="\n")
+            print()
+
+        analyzer = CurrencyChangesJSTracer()
+        js_tracer, config = analyzer.get_js_tracer()
+        traces = checker.js_trace_scenarios(tx_a, tx_b, js_tracer, config)
+        currency_changes = analyzer.process_traces(traces)
+        securify_tx_a = check_securify_properties(
+            currency_changes.tx_a_normal, currency_changes.tx_a_reverse
+        )
+        securify_tx_b = check_securify_properties(
+            currency_changes.tx_b_normal, currency_changes.tx_b_reverse
+        )
+        print("Securify Tx A", securify_tx_a["properties"])
+        if verbose:
+            print("Witnesses", json.dumps(securify_tx_a["witnesses"], indent=2))
+        print("Securify Tx B", securify_tx_b["properties"])
+        if verbose:
+            print("Witnesses", json.dumps(securify_tx_b["witnesses"], indent=2))
 
         if args.traces_dir:
             print("Creating traces")
