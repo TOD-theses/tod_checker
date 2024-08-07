@@ -1,4 +1,4 @@
-{
+JS_TRACER = """{
   structLogs: [],
   calls: [],
   logs: [],
@@ -78,4 +78,4 @@
   result: function(ctx, db) {
     return {"gas": ctx.gasUsed, "calls": this.calls, "logs": this.logs };
   }
-}
+}"""

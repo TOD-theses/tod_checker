@@ -22,6 +22,7 @@ from tod_checker.currency_changes.events.tokens.erc_777 import (
 from tod_checker.currency_changes.tracer.js_trace_types import (
     JSTraceResult,
 )
+from tod_checker.currency_changes.tracer.tracer import JS_TRACER
 from tod_checker.types.types import TxScenarioBundle
 
 TRACER_PATH = Path(os.path.realpath(__file__)).parent / "tracer.js"
@@ -42,8 +43,7 @@ class CurrencyChangesJSTracer:
         )
 
     def get_js_tracer(self) -> tuple[str, dict]:
-        with open(TRACER_PATH) as f:
-            return f.read(), {}
+        return JS_TRACER, {}
 
     def process_traces(
         self, traces: TxScenarioBundle[JSTraceResult]
