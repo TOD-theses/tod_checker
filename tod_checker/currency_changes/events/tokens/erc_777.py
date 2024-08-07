@@ -73,7 +73,7 @@ class ERC777MintedEvent(CurrencyChangeEvent):
     def signature() -> str:
         # Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)
         # https://www.4byte.directory/event-signatures/?bytes_signature=0x2fe5be0146f74c5bce36c0b80911af6c7d86ff27e89d5cfa61fc681327954e5d
-        return str("0x2fe5be0146f74c5bce36c0b80911af6c7d86ff27e89d5cfa61fc681327954e5d")
+        return "2fe5be0146f74c5bce36c0b80911af6c7d86ff27e89d5cfa61fc681327954e5d"
 
     @override
     @classmethod
@@ -114,7 +114,7 @@ class ERC777BurnedEvent(CurrencyChangeEvent):
     def signature() -> str:
         # Minted(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)
         # https://www.4byte.directory/event-signatures/?bytes_signature=0xa78a9be3a7b862d26933ad85fb11d80ef66b8f972d7cbba06621d583943a4098
-        return str("0xa78a9be3a7b862d26933ad85fb11d80ef66b8f972d7cbba06621d583943a4098")
+        return "a78a9be3a7b862d26933ad85fb11d80ef66b8f972d7cbba06621d583943a4098"
 
     @override
     @classmethod

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Sequence
+from typing import Iterable, Sequence
 
 from tod_checker.currency_changes.currency_change import (
     CURRENCY_TYPE,
@@ -63,7 +63,7 @@ class CurrencyChangesJSTracer:
                 {
                     "type": CURRENCY_TYPE.ETHER,
                     "currency_identifier": "Wei",
-                    "owner": call["sender"],
+                    "owner": unify_hex_value(call["sender"]),
                     "change": -value,
                     "location": call["location"],
                 },
@@ -72,7 +72,7 @@ class CurrencyChangesJSTracer:
                 {
                     "type": CURRENCY_TYPE.ETHER,
                     "currency_identifier": "Wei",
-                    "owner": call["to"],
+                    "owner": unify_hex_value(call["to"]),
                     "change": value,
                     "location": call["location"],
                 },
@@ -80,7 +80,9 @@ class CurrencyChangesJSTracer:
 
         for log in x["logs"]:
             event = self._decoder.decode_event(
-                log["topics"], log["data"], log["address"]
+                unify_hex_values(log["topics"]),
+                unify_hex_value(log["data"]),
+                unify_hex_value(log["address"]),
             )
             if isinstance(event, CurrencyChangeEvent):
                 currency_changes.extend(
@@ -91,3 +93,11 @@ class CurrencyChangesJSTracer:
                 )
 
         return currency_changes
+
+
+def unify_hex_value(val: str):
+    return val.lower().removeprefix("0x")
+
+
+def unify_hex_values(values: Iterable[str]):
+    return [unify_hex_value(v) for v in values]

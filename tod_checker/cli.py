@@ -4,6 +4,9 @@ from argparse import ArgumentParser
 import json
 from pathlib import Path
 
+from tod_checker.currency_changes.properties.gain_and_loss import (
+    check_gain_and_loss_properties,
+)
 from tod_checker.currency_changes.properties.securify import check_securify_properties
 from tod_checker.currency_changes.tracer.currency_changes_js_tracer import (
     CurrencyChangesJSTracer,
@@ -77,16 +80,43 @@ def main():
         js_tracer, config = analyzer.get_js_tracer()
         traces = checker.js_trace_scenarios(tx_a, tx_b, js_tracer, config)
         currency_changes = analyzer.process_traces(traces)
+
+        tx_a_data = tx_block_mapper.get_transaction(tx_a)
+        tx_b_data = tx_block_mapper.get_transaction(tx_b)
+
+        gain_and_loss = check_gain_and_loss_properties(
+            changes_normal=[
+                *currency_changes.tx_a_normal,
+                *currency_changes.tx_b_normal,
+            ],
+            changes_reverse=[
+                *currency_changes.tx_a_reverse,
+                *currency_changes.tx_b_reverse,
+            ],
+            accounts={
+                "attacker_eoa": tx_a_data["from"],
+                "attacker_bot": tx_a_data["to"],
+                "victim": tx_b_data["from"],
+            },
+        )
+        print(
+            "Attacker gain & victim loss:",
+            gain_and_loss["properties"]["attacker_gain_and_victim_loss"],
+        )
+        if verbose:
+            print("Sub properties:", json.dumps(gain_and_loss["properties"], indent=2))
+            print("Witnesses:", json.dumps(gain_and_loss["witnesses"], indent=2))
+
         securify_tx_a = check_securify_properties(
             currency_changes.tx_a_normal, currency_changes.tx_a_reverse
         )
         securify_tx_b = check_securify_properties(
             currency_changes.tx_b_normal, currency_changes.tx_b_reverse
         )
-        print("Securify Tx A", securify_tx_a["properties"])
+        print("Securify Tx A:", securify_tx_a["properties"])
         if verbose:
             print("Witnesses", json.dumps(securify_tx_a["witnesses"], indent=2))
-        print("Securify Tx B", securify_tx_b["properties"])
+        print("Securify Tx B:", securify_tx_b["properties"])
         if verbose:
             print("Witnesses", json.dumps(securify_tx_b["witnesses"], indent=2))
 

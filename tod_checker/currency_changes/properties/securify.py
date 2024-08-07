@@ -100,7 +100,9 @@ def get_different_groups(
 ) -> Sequence[tuple[KEY, Sequence[EtherTransfer], Sequence[EtherTransfer]]]:
     groups_normal = group_by(calls_normal, get_key)
     groups_reverse = group_by(calls_reverse, get_key)
-    return groups_of_different_size(groups_normal, groups_reverse)
+    result = groups_of_different_size(groups_normal, groups_reverse)
+    # order does not matter, as long as it is deterministic
+    return list(sorted(result))
 
 
 def group_by(

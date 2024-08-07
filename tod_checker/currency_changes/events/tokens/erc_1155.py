@@ -27,7 +27,7 @@ class ERC1155TransferSingleEvent(CurrencyChangeEvent):
     def signature() -> str:
         # TransferSingle(address indexed _operator, address indexed _from, address indexed _to, uint256 _id, uint256 _value)
         # https://www.4byte.directory/event-signatures/?bytes_signature=0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62
-        return str("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62")
+        return "c3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"
 
     @override
     @classmethod
@@ -41,7 +41,7 @@ class ERC1155TransferSingleEvent(CurrencyChangeEvent):
         return cls(
             topics[2][-40:],
             topics[3][-40:],
-            int(value, 16),
+            value,
             hex(id),
             storage_address,
         )
@@ -104,7 +104,6 @@ class ERC1155TransferBatchEvent(CurrencyChangeEvent):
     def decode(cls, topics: Sequence[str], data: str, storage_address: str) -> Self:
         ids, values = decode(["uint256[]", "uint256[]"], bytes.fromhex(data))
         ids = [hex(id) for id in ids]
-        values = [int(value, 16) for value in values]
         return cls(topics[2][-40:], topics[3][-40:], values, ids, storage_address)
 
     @override
