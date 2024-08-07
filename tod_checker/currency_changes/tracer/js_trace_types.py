@@ -26,6 +26,7 @@ class JSTraceResult(TypedDict):
     gas: int
     calls: Sequence[JSTraceResultCall]
     logs: Sequence[JSTraceResultLog]
+    reverted_call_contexts: Sequence[int]
 
 
 @dataclass

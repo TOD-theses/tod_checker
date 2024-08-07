@@ -55,9 +55,9 @@ class CurrencyChangesJSTracer:
             tx_b_reverse=self.process_trace(traces.tx_b_reverse),
         )
 
-    def process_trace(self, x: JSTraceResult) -> Sequence[LocatedCurrencyChange]:
+    def process_trace(self, trace: JSTraceResult) -> Sequence[LocatedCurrencyChange]:
         currency_changes: list[LocatedCurrencyChange] = []
-        for call in x["calls"]:
+        for call in trace["calls"]:
             value = int(call["value"], 16)
             currency_changes.append(
                 {
@@ -78,7 +78,7 @@ class CurrencyChangesJSTracer:
                 },
             )
 
-        for log in x["logs"]:
+        for log in trace["logs"]:
             event = self._decoder.decode_event(
                 unify_hex_values(log["topics"]),
                 unify_hex_value(log["data"]),
