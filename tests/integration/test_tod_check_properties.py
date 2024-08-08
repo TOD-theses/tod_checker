@@ -31,6 +31,16 @@ def _get_checker():
 
 
 def _get_currency_changes(tx_a: str, tx_b: str):
+    currency_changes, _ = _get_analyzed_traces(tx_a, tx_b)
+    return currency_changes
+
+
+def _get_events(tx_a: str, tx_b: str):
+    _, events = _get_analyzed_traces(tx_a, tx_b)
+    return events
+
+
+def _get_analyzed_traces(tx_a: str, tx_b: str):
     checker = _get_checker()
     block_a = checker.download_data_for_transaction(tx_a)
     block_b = checker.download_data_for_transaction(tx_b)

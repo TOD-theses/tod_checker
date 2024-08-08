@@ -4,6 +4,9 @@ from argparse import ArgumentParser
 import json
 from pathlib import Path
 
+from tod_checker.currency_changes.properties.erc20_approve_after_transfer import (
+    check_erc20_approval_attack,
+)
 from tod_checker.currency_changes.properties.gain_and_loss import (
     check_gain_and_loss_properties,
 )
@@ -79,7 +82,7 @@ def main():
         analyzer = CurrencyChangesJSTracer()
         js_tracer, config = analyzer.get_js_tracer()
         traces = checker.js_trace_scenarios(tx_a, tx_b, js_tracer, config)
-        currency_changes = analyzer.process_traces(traces)
+        currency_changes, events = analyzer.process_traces(traces)
 
         tx_a_data = tx_block_mapper.get_transaction(tx_a)
         tx_b_data = tx_block_mapper.get_transaction(tx_b)
@@ -115,10 +118,21 @@ def main():
         )
         print("Securify Tx A:", securify_tx_a["properties"])
         if verbose:
-            print("Witnesses", json.dumps(securify_tx_a["witnesses"], indent=2))
+            print("Witnesses:", json.dumps(securify_tx_a["witnesses"], indent=2))
         print("Securify Tx B:", securify_tx_b["properties"])
         if verbose:
-            print("Witnesses", json.dumps(securify_tx_b["witnesses"], indent=2))
+            print("Witnesses:", json.dumps(securify_tx_b["witnesses"], indent=2))
+
+        approval = check_erc20_approval_attack(events.tx_a_normal, events.tx_b_normal)
+        print(
+            "ERC-20 Transfer-Approval:",
+            approval["properties"]["approve_after_transfer"],
+        )
+        if verbose:
+            print(
+                "Witnesses:",
+                json.dumps(approval["witnesses"]["transfer_approval_pairs"], indent=2),
+            )
 
         if args.traces_dir:
             print("Creating traces")
