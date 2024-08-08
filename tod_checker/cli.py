@@ -142,7 +142,9 @@ def main():
         if verbose:
             print("Witnesses:", json.dumps(securify_tx_b["witnesses"], indent=2))
 
-        approval = check_erc20_approval_attack(events.tx_a_normal, events.tx_b_normal)
+        approval = check_erc20_approval_attack(
+            events.tx_a_normal, events.tx_b_normal, events.tx_b_reverse
+        )
         print(
             "ERC-20 Transfer-Approval:",
             approval["properties"]["approve_after_transfer"],

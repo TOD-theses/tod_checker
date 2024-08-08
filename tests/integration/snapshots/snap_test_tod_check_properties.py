@@ -348,3 +348,67 @@ snapshots["test_finds_TOD_Amount securify b"] = {
         "TOD_Transfer": [],
     },
 }
+
+snapshots["test_finds_erc20_approval properties"] = {
+    "properties": {"approve_after_transfer": True},
+    "witnesses": {
+        "transfer_approval_pairs": [
+            {
+                "approval": {
+                    "owner": "e942cdd0af66ab9ab06515701fa3707ec7deb93e",
+                    "spender": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 271166340552797046,
+                },
+                "transfer": {
+                    "from": "e942cdd0af66ab9ab06515701fa3707ec7deb93e",
+                    "to": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 255472686422224793,
+                },
+            },
+            {
+                "approval": {
+                    "owner": "e942cdd0af66ab9ab06515701fa3707ec7deb93e",
+                    "spender": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 0,
+                },
+                "transfer": {
+                    "from": "e942cdd0af66ab9ab06515701fa3707ec7deb93e",
+                    "to": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 255472686422224793,
+                },
+            },
+            {
+                "approval": {
+                    "owner": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "spender": "dc24316b9ae028f1497c275eb9192a3ea0f67022",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 271166340552797046,
+                },
+                "transfer": {
+                    "from": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "to": "dc24316b9ae028f1497c275eb9192a3ea0f67022",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 255472686422224793,
+                },
+            },
+            {
+                "approval": {
+                    "owner": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "spender": "dc24316b9ae028f1497c275eb9192a3ea0f67022",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 0,
+                },
+                "transfer": {
+                    "from": "15469528c11e8ace863f3f9e5a8329216e33dd7d",
+                    "to": "dc24316b9ae028f1497c275eb9192a3ea0f67022",
+                    "token": "ae7ab96520de3a18e5e111b5eaab095312d7fe84",
+                    "value": 255472686422224793,
+                },
+            },
+        ]
+    },
+}

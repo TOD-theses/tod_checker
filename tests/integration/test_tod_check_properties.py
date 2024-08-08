@@ -3,6 +3,9 @@ import pytest
 from tod_checker.checker.checker import (
     TodChecker,
 )
+from tod_checker.currency_changes.properties.erc20_approve_after_transfer import (
+    check_erc20_approval_attack,
+)
 from tod_checker.currency_changes.properties.gain_and_loss import (
     check_gain_and_loss_properties,
 )
@@ -163,3 +166,30 @@ def test_finds_ERC1155_gains_and_losses(snapshot: PyTestSnapshotTest):
 
     assert result["properties"]["attacker_gain_and_victim_loss"]
     snapshot.assert_match(result, "properties")
+
+
+@pytest.mark.vcr
+def test_finds_erc20_approval(snapshot: PyTestSnapshotTest):
+    tx_a = "0x01a39b130b027dd5f4ae22d17e21dc1727bb9bff2bad1a66101eeab1056e0ef7"
+    tx_b = "0x4c2aa7a53242100b951be328d5af6aa06885062ad1a9cecd6156339e69cf0249"
+
+    events = _get_events(tx_a, tx_b)
+    result = check_erc20_approval_attack(
+        events.tx_a_normal, events.tx_b_normal, events.tx_b_reverse
+    )
+
+    assert result["properties"]["approve_after_transfer"]
+    snapshot.assert_match(result, "properties")
+
+
+@pytest.mark.vcr
+def test_does_not_find_erc20_approval(snapshot: PyTestSnapshotTest):
+    tx_a = "0x1f0f47f1e9c91287a5ae2f0142b0279d31f5390baa7f76449d2f027033ad41d8"
+    tx_b = "0x61ac2e1ee111801950261b307a10ab6c27cfe5fbdeb8d5b2266d56dc1bbe1242"
+
+    events = _get_events(tx_a, tx_b)
+    result = check_erc20_approval_attack(
+        events.tx_a_normal, events.tx_b_normal, events.tx_b_reverse
+    )
+
+    assert not result["properties"]["approve_after_transfer"]
