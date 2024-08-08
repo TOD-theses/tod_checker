@@ -87,6 +87,25 @@ def main():
         tx_a_data = tx_block_mapper.get_transaction(tx_a)
         tx_b_data = tx_block_mapper.get_transaction(tx_b)
 
+        gain_and_loss_approx = check_gain_and_loss_properties(
+            changes_normal=currency_changes.tx_b_normal,
+            changes_reverse=currency_changes.tx_b_reverse,
+            accounts={
+                "attacker_eoa": tx_a_data["from"],
+                "attacker_bot": tx_a_data["to"],
+                "victim": tx_b_data["from"],
+            },
+        )
+        print(
+            "Attacker gain & victim loss (Approximation):",
+            gain_and_loss_approx["properties"]["attacker_gain_and_victim_loss"],
+        )
+        if verbose:
+            print(
+                "Sub properties:",
+                json.dumps(gain_and_loss_approx["properties"], indent=2),
+            )
+            print("Witnesses:", json.dumps(gain_and_loss_approx["witnesses"], indent=2))
         gain_and_loss = check_gain_and_loss_properties(
             changes_normal=[
                 *currency_changes.tx_a_normal,
