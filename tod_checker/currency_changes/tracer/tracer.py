@@ -1,7 +1,6 @@
 JS_TRACER = """{
   calls: [],
   logs: [],
-  errors: [],
   call_context_stack: [0],
   call_context_counter: 0,
   reverted_call_contexts: [],
@@ -44,9 +43,6 @@ JS_TRACER = """{
 
   step: function(log, db) {
     opcode = log.op.toNumber()
-    if (log.getError()) {
-        errors.push(log.getError())
-    }
 
     if (opcode == 0xF1 || opcode == 0xF2) {
         this.calls.push({
