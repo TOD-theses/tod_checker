@@ -27,6 +27,11 @@ def main():
     parser.add_argument("tx_a", type=str, help="Hash of the first transaction")
     parser.add_argument("tx_b", type=str, help="Hash of the second transaction")
     parser.add_argument(
+        "--check-props",
+        action="store_true",
+        help="Check for TOD attack characteristics",
+    )
+    parser.add_argument(
         "--traces-dir",
         type=Path,
         help="If provided, it will additionally store VM traces in this directory",
@@ -79,81 +84,89 @@ def main():
             print(*tx_a_differences, sep="\n")
             print()
 
-        analyzer = CurrencyChangesJSTracer()
-        js_tracer, config = analyzer.get_js_tracer()
-        traces = checker.js_trace_scenarios(tx_a, tx_b, js_tracer, config)
-        currency_changes, events = analyzer.process_traces(traces)
+        if args.check_props:
+            analyzer = CurrencyChangesJSTracer()
+            js_tracer, config = analyzer.get_js_tracer()
+            traces = checker.js_trace_scenarios(tx_a, tx_b, js_tracer, config)
+            currency_changes, events = analyzer.process_traces(traces)
 
-        tx_a_data = tx_block_mapper.get_transaction(tx_a)
-        tx_b_data = tx_block_mapper.get_transaction(tx_b)
+            tx_a_data = tx_block_mapper.get_transaction(tx_a)
+            tx_b_data = tx_block_mapper.get_transaction(tx_b)
 
-        gain_and_loss_approx = check_gain_and_loss_properties(
-            changes_normal=currency_changes.tx_b_normal,
-            changes_reverse=currency_changes.tx_b_reverse,
-            accounts={
-                "attacker_eoa": tx_a_data["from"],
-                "attacker_bot": tx_a_data["to"],
-                "victim": tx_b_data["from"],
-            },
-        )
-        print(
-            "Attacker gain & victim loss (Approximation):",
-            gain_and_loss_approx["properties"]["attacker_gain_and_victim_loss"],
-        )
-        if verbose:
-            print(
-                "Sub properties:",
-                json.dumps(gain_and_loss_approx["properties"], indent=2),
+            gain_and_loss_approx = check_gain_and_loss_properties(
+                changes_normal=currency_changes.tx_b_normal,
+                changes_reverse=currency_changes.tx_b_reverse,
+                accounts={
+                    "attacker_eoa": tx_a_data["from"],
+                    "attacker_bot": tx_a_data["to"],
+                    "victim": tx_b_data["from"],
+                },
             )
-            print("Witnesses:", json.dumps(gain_and_loss_approx["witnesses"], indent=2))
-        gain_and_loss = check_gain_and_loss_properties(
-            changes_normal=[
-                *currency_changes.tx_a_normal,
-                *currency_changes.tx_b_normal,
-            ],
-            changes_reverse=[
-                *currency_changes.tx_a_reverse,
-                *currency_changes.tx_b_reverse,
-            ],
-            accounts={
-                "attacker_eoa": tx_a_data["from"],
-                "attacker_bot": tx_a_data["to"],
-                "victim": tx_b_data["from"],
-            },
-        )
-        print(
-            "Attacker gain & victim loss:",
-            gain_and_loss["properties"]["attacker_gain_and_victim_loss"],
-        )
-        if verbose:
-            print("Sub properties:", json.dumps(gain_and_loss["properties"], indent=2))
-            print("Witnesses:", json.dumps(gain_and_loss["witnesses"], indent=2))
-
-        securify_tx_a = check_securify_properties(
-            currency_changes.tx_a_normal, currency_changes.tx_a_reverse
-        )
-        securify_tx_b = check_securify_properties(
-            currency_changes.tx_b_normal, currency_changes.tx_b_reverse
-        )
-        print("Securify Tx A:", securify_tx_a["properties"])
-        if verbose:
-            print("Witnesses:", json.dumps(securify_tx_a["witnesses"], indent=2))
-        print("Securify Tx B:", securify_tx_b["properties"])
-        if verbose:
-            print("Witnesses:", json.dumps(securify_tx_b["witnesses"], indent=2))
-
-        approval = check_erc20_approval_attack(
-            events.tx_a_normal, events.tx_b_normal, events.tx_b_reverse
-        )
-        print(
-            "ERC-20 Transfer-Approval:",
-            approval["properties"]["approve_after_transfer"],
-        )
-        if verbose:
             print(
-                "Witnesses:",
-                json.dumps(approval["witnesses"]["transfer_approval_pairs"], indent=2),
+                "Attacker gain & victim loss (Approximation):",
+                gain_and_loss_approx["properties"]["attacker_gain_and_victim_loss"],
             )
+            if verbose:
+                print(
+                    "Sub properties:",
+                    json.dumps(gain_and_loss_approx["properties"], indent=2),
+                )
+                print(
+                    "Witnesses:",
+                    json.dumps(gain_and_loss_approx["witnesses"], indent=2),
+                )
+            gain_and_loss = check_gain_and_loss_properties(
+                changes_normal=[
+                    *currency_changes.tx_a_normal,
+                    *currency_changes.tx_b_normal,
+                ],
+                changes_reverse=[
+                    *currency_changes.tx_a_reverse,
+                    *currency_changes.tx_b_reverse,
+                ],
+                accounts={
+                    "attacker_eoa": tx_a_data["from"],
+                    "attacker_bot": tx_a_data["to"],
+                    "victim": tx_b_data["from"],
+                },
+            )
+            print(
+                "Attacker gain & victim loss:",
+                gain_and_loss["properties"]["attacker_gain_and_victim_loss"],
+            )
+            if verbose:
+                print(
+                    "Sub properties:", json.dumps(gain_and_loss["properties"], indent=2)
+                )
+                print("Witnesses:", json.dumps(gain_and_loss["witnesses"], indent=2))
+
+            securify_tx_a = check_securify_properties(
+                currency_changes.tx_a_normal, currency_changes.tx_a_reverse
+            )
+            securify_tx_b = check_securify_properties(
+                currency_changes.tx_b_normal, currency_changes.tx_b_reverse
+            )
+            print("Securify Tx A:", securify_tx_a["properties"])
+            if verbose:
+                print("Witnesses:", json.dumps(securify_tx_a["witnesses"], indent=2))
+            print("Securify Tx B:", securify_tx_b["properties"])
+            if verbose:
+                print("Witnesses:", json.dumps(securify_tx_b["witnesses"], indent=2))
+
+            approval = check_erc20_approval_attack(
+                events.tx_a_normal, events.tx_b_normal, events.tx_b_reverse
+            )
+            print(
+                "ERC-20 Transfer-Approval:",
+                approval["properties"]["approve_after_transfer"],
+            )
+            if verbose:
+                print(
+                    "Witnesses:",
+                    json.dumps(
+                        approval["witnesses"]["transfer_approval_pairs"], indent=2
+                    ),
+                )
 
         if args.traces_dir:
             print("Creating traces")
